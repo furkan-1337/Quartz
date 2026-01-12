@@ -36,6 +36,7 @@ namespace Quartz.Runtime
             global.Define("Array", new ArrayModule());
             global.Define("Marshal", new MarshalModule());
             global.Define("Converter", new ConverterModule());
+            global.Define("Process", new ProcessModule());
 
             // Global Native Functions
             global.Define("typeof", new TypeOfFunction());

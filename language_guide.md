@@ -21,6 +21,7 @@ Welcome to the official documentation for the **Quartz** programming language. Q
     - [IO](#io-file-system)
     - [Random](#random)
     - [Converter](#converter)
+    - [Process](#process)
 8. [Advanced Features](#advanced-features)
     - [Extern (FFI)](#extern-ffi)
     - [Memory Management (Marshal)](#memory-management-marshal)
@@ -218,6 +219,14 @@ File operations.
 -   `Converter.toInt(val)`: Converts string/double to integer.
 -   `Converter.toString(val)`: Converts value to string.
 -   `Converter.toDouble(val)`: Converts value to double.
+
+### Process
+System process management.
+- `Process.list()`: Returns an array of strings in format "PID:Name".
+- `Process.getModuleAddress(pid, moduleName)`: Returns a `pointer` to the base address of a specified module in a process.
+- `Process.isRunning(pid)`: Returns `true` if the process is running.
+- `Process.getProcessIdByName(name)`: Returns the PID of the specified process name, or -1 if not found.
+- `Process.getModules(pid)`: Returns an array of module names for the specified process.
 
 ---
 
