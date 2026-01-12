@@ -9,6 +9,7 @@ namespace Quartz.Runtime
     public class Environment
     {
         private readonly Dictionary<string, object> values = new();
+        public IReadOnlyDictionary<string, object> Values => values;
         private readonly Environment enclosing;
 
         public Environment()

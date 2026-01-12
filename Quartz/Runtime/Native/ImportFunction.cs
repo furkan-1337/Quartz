@@ -20,7 +20,12 @@ namespace Quartz.Runtime.Native
 
             if (cache.ContainsKey(fullPath))
             {
-                return cache[fullPath];
+                var cachedModule = cache[fullPath];
+                foreach (var kvp in cachedModule.ExportedEnv.Values)
+                {
+                    interpreter.CurrentEnvironment.Define(kvp.Key, kvp.Value);
+                }
+                return cachedModule;
             }
 
             if (!File.Exists(fullPath))
@@ -49,10 +54,15 @@ namespace Quartz.Runtime.Native
             }
             catch
             {
-                // If execution fails, remove from cache to allow retry? 
-                // Or leave it broken. Usually cleaner to remove.
+                // If execution fails, remove from cache to allow retry
                 cache.Remove(fullPath);
                 throw;
+            }
+
+            // Inject imported symbols into current environment
+            foreach (var kvp in module.ExportedEnv.Values)
+            {
+                interpreter.CurrentEnvironment.Define(kvp.Key, kvp.Value);
             }
 
             return module;

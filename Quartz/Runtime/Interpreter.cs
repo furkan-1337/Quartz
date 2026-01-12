@@ -15,6 +15,7 @@ namespace Quartz.Runtime
     {
         public Environment global;
         private Environment environment;
+        internal Environment CurrentEnvironment => environment;
 
         public Interpreter()
         {

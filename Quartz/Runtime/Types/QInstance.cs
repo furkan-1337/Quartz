@@ -11,6 +11,7 @@ namespace Quartz.Runtime.Types
     {
         private QClass klass;
         private readonly Dictionary<string, object> fields = new Dictionary<string, object>();
+        internal IReadOnlyDictionary<string, object> Fields => fields;
 
         public QInstance(QClass klass)
         {
