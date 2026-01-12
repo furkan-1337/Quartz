@@ -251,6 +251,15 @@ The `Marshal` module works with FFI to handle raw memory and pointers.
 | `Marshal.readInt(ptr)` | Reads an integer from address. |
 | `Marshal.writeInt(ptr, val)` | Writes an integer to address. |
 | `Marshal.readByte(ptr)` | Reads a byte. |
+| `Marshal.writeByte(ptr, val)` | Writes a byte to address. |
+| `Marshal.readInt16(ptr)` | Reads a 16-bit integer (short). |
+| `Marshal.writeInt16(ptr, val)` | Writes a 16-bit integer (short). |
+| `Marshal.readInt(ptr)` | Reads a 32-bit integer (int). |
+| `Marshal.writeInt(ptr, val)` | Writes a 32-bit integer (int). |
+| `Marshal.readInt64(ptr)` | Reads a 64-bit integer (long). |
+| `Marshal.writeInt64(ptr, val)` | Writes a 64-bit integer (long). |
+| `Marshal.readDouble(ptr)` | Reads a 64-bit floating point number (double). |
+| `Marshal.writeDouble(ptr, val)` | Writes a 64-bit floating point number (double). |
 | `Marshal.structureToPtr(obj, ptr)` | Marshals a struct/class to memory. |
 
 **Example: Reading Process Memory**
