@@ -11,6 +11,8 @@ namespace Quartz.Runtime.Modules
         public ThreadModule() : base(new Environment())
         {
             ExportedEnv.Define("sleep", new SleepFunction());
+            ExportedEnv.Define("create", new CreateFunction());
+            ExportedEnv.Define("getCurrentId", new GetCurrentIdFunction());
         }
 
         private class SleepFunction : ICallable
@@ -25,6 +27,41 @@ namespace Quartz.Runtime.Modules
             }
 
             public override string ToString() => "<native fn Thread.sleep>";
+        }
+
+        private class CreateFunction : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                if (!(arguments[0] is ICallable callable))
+                    throw new Exception("Thread.create expects a function.");
+
+                var thread = new System.Threading.Thread(() =>
+                {
+                    try
+                    {
+                        callable.Call(interpreter, new List<object>());
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Console.WriteLine($"[Thread Error] {ex.Message}");
+                    }
+                });
+                thread.Start();
+                return null;
+            }
+            public override string ToString() => "<native fn Thread.create>";
+        }
+
+        private class GetCurrentIdFunction : ICallable
+        {
+            public int Arity() => 0;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                return System.Threading.Thread.CurrentThread.ManagedThreadId;
+            }
+            public override string ToString() => "<native fn Thread.getCurrentId>";
         }
     }
 }

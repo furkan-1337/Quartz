@@ -37,6 +37,11 @@ namespace Quartz.Runtime
             global.Define("Marshal", new MarshalModule());
             global.Define("Converter", new ConverterModule());
             global.Define("Process", new ProcessModule());
+            global.Define("System", new SystemModule());
+            global.Define("Network", new NetworkModule());
+            global.Define("Input", new InputModule());
+            global.Define("Crypto", new CryptoModule());
+            global.Define("Env", new EnvModule());
 
             // Global Native Functions
             global.Define("typeof", new TypeOfFunction());
@@ -144,10 +149,12 @@ namespace Quartz.Runtime
                     return environment.Get(variable.Name);
 
                 case AssignExpr assign:
-                    object val = Evaluate(assign.Value);
-                    environment.Assign(assign.Name, val);
+                    {
+                        object val = Evaluate(assign.Value);
+                        environment.Assign(assign.Name, val);
 
-                    return val;
+                        return val;
+                    }
 
                 case BinaryExpr binary:
                     return EvaluateBinary(binary);
@@ -189,53 +196,75 @@ namespace Quartz.Runtime
                     return function.Call(this, arguments);
 
                 case GetExpr getExpr:
-                    object obj = Evaluate(getExpr.Object);
-                    if (obj is QInstance instance)
                     {
-                        return instance.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                        object obj = Evaluate(getExpr.Object);
+                        if (obj is QInstance instance)
+                        {
+                            return instance.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                        }
+                        if (obj is Module module)
+                        {
+                            return module.Get(getExpr.Name);
+                        }
+                        if (obj is IDictionary<string, object> dictionary)
+                        {
+                            if (dictionary.TryGetValue(getExpr.Name, out var value))
+                            {
+                                return value;
+                            }
+                            return null;
+                        }
+                        throw new RuntimeError(new Token { Value = getExpr.Name }, "Only instances have properties.");
                     }
-                    if (obj is Module module)
-                    {
-                        return module.Get(getExpr.Name);
-                    }
-                    throw new RuntimeError(new Token { Value = getExpr.Name }, "Only instances have properties.");
 
                 case SetExpr set:
-                    object objectSet = Evaluate(set.Object);
-                    if (!(objectSet is QInstance instanceSet))
                     {
-                        throw new RuntimeError(new Token { Value = set.Name }, "Only instances have fields.");
+                        object objectSet = Evaluate(set.Object);
+                        if (!(objectSet is QInstance instanceSet))
+                        {
+                            throw new RuntimeError(new Token { Value = set.Name }, "Only instances have fields.");
+                        }
+                        object valueSet = Evaluate(set.Value);
+                        instanceSet.Set(new Token { Value = set.Name }, valueSet);
+                        return valueSet;
                     }
-                    object valueSet = Evaluate(set.Value);
-                    instanceSet.Set(new Token { Value = set.Name }, valueSet);
-                    return valueSet;
 
                 case ThisExpr thisExpr:
                     return environment.Get(thisExpr.Keyword.Value);
 
                 case ArrayExpr array:
-                    List<object> values = new List<object>();
-                    foreach (Expr element in array.Values)
                     {
-                        values.Add(Evaluate(element));
+                        List<object> values = new List<object>();
+                        foreach (Expr element in array.Values)
+                        {
+                            values.Add(Evaluate(element));
+                        }
+                        return values;
                     }
-                    return values;
 
                 case IndexExpr indexExpr:
-                    object collection = Evaluate(indexExpr.Object);
-                    object index = Evaluate(indexExpr.Index);
-
-                    if (collection is List<object> list)
                     {
-                        int i = -1;
-                        if (index is int n) i = n;
-                        else if (index is double d) i = (int)d;
-                        else throw new Exception("Index must be a number.");
+                        object collection = Evaluate(indexExpr.Object);
+                        object index = Evaluate(indexExpr.Index);
 
-                        if (i >= 0 && i < list.Count) return list[i];
-                        throw new Exception("Index out of bounds.");
+                        if (collection is List<object> list)
+                        {
+                            int i = -1;
+                            if (index is int n) i = n;
+                            else if (index is double d) i = (int)d;
+                            else throw new Exception("Index must be a number.");
+
+                            if (i >= 0 && i < list.Count) return list[i];
+                            throw new Exception("Index out of bounds.");
+                        }
+                        if (collection is IDictionary<string, object> dictionary)
+                        {
+                            string key = index?.ToString() ?? "";
+                            if (dictionary.TryGetValue(key, out var val)) return val;
+                            return null;
+                        }
+                        throw new Exception("Only arrays and maps are indexable.");
                     }
-                    throw new Exception("Only arrays are indexable.");
 
                 default:
                     throw new Exception($"Unknown expression type: {expr.GetType().Name}");

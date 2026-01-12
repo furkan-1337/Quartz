@@ -22,6 +22,11 @@ Welcome to the official documentation for the **Quartz** programming language. Q
     - [Random](#random)
     - [Converter](#converter)
     - [Process](#process)
+    - [System](#system)
+    - [Network](#network)
+    - [Input](#input)
+    - [Crypto](#crypto)
+    - [Env](#env)
 8. [Advanced Features](#advanced-features)
     - [Extern (FFI)](#extern-ffi)
     - [Memory Management (Marshal)](#memory-management-marshal)
@@ -203,6 +208,12 @@ String manipulation utilities.
 -   `String.split(str, delim)`: Split into array.
 -   `String.trim(str)`: Remove whitespace.
 
+### Thread
+Thread management.
+- `Thread.sleep(ms)`: Pauses execution for the specified milliseconds.
+- `Thread.create(func)`: Spawns a new thread and executes the given function.
+- `Thread.getCurrentId()`: Returns the managed ID of the current thread.
+
 ### IO (File System)
 File operations.
 -   `IO.readFile(path)`: Reads entire file as string.
@@ -222,11 +233,48 @@ File operations.
 
 ### Process
 System process management.
-- `Process.list()`: Returns an array of strings in format "PID:Name".
-- `Process.getModuleAddress(pid, moduleName)`: Returns a `pointer` to the base address of a specified module in a process.
+- `Process.list()`: Returns an array of process names.
 - `Process.isRunning(pid)`: Returns `true` if the process is running.
 - `Process.getProcessIdByName(name)`: Returns the PID of the specified process name, or -1 if not found.
 - `Process.getModules(pid)`: Returns an array of module names for the specified process.
+- `Process.getModuleAddress(pid, moduleName)`: Returns a `pointer` to the base address of a specified module in a process.
+- `Process.terminate(pid)`: Terminates the process with the given ID.
+- `Process.getCurrentProcess()`: Returns the process ID of the current interpreter.
+- `Process.getExecutablePath(pid)`: Returns the full executable path of the process.
+- `Process.getWorkingPath(pid)`: Returns the working directory (or exe directory) of the process.
+
+### System
+System and hardware information.
+- `System.getOSVersion()`: Returns OS name and version.
+- `System.getMachineName()`: Returns the computer name.
+- `System.getUserName()`: Returns the current user name.
+- `System.getMemoryStats()`: Returns a dictionary with `totalPhys`, `availPhys`, and `memoryLoad`.
+- `System.getCPUUsage()`: Returns process-specific CPU usage percentage.
+
+### Network
+Basic HTTP capabilities.
+- `Network.get(url)`: Performs an HTTP GET request (alias for `downloadString`).
+- `Network.post(url, data)`: Performs an HTTP POST request.
+- `Network.downloadString(url)`: Downloads the content of a URL as a string.
+- `Network.downloadBytes(url)`: Downloads the content of a URL as an array of bytes.
+- `Network.downloadFile(url, path)`: Downloads a file from a URL and saves it to the specified path.
+
+### Input
+Keyboard and mouse interaction.
+- `Input.isKeyDown(vKey)`: Checks if a key is pressed (uses Win32 Virtual-Key codes).
+- `Input.getMousePos()`: Returns a dictionary `{ x, y }` with mouse coordinates.
+
+### Crypto
+Hashing and encoding utilities.
+- `Crypto.sha256(data)`: Returns SHA256 hash.
+- `Crypto.md5(data)`: Returns MD5 hash.
+- `Crypto.base64Encode(data)`: Encodes string to Base64.
+- `Crypto.base64Decode(str)`: Decodes Base64 to string.
+
+### Env
+Environment variable management.
+- `Env.get(name)`: Gets an environment variable value.
+- `Env.set(name, value)`: Sets an environment variable value.
 
 ---
 

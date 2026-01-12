@@ -16,6 +16,10 @@ namespace Quartz.Runtime.Modules
             ExportedEnv.Define("getModuleAddress", new NativeGetModuleAddress());
             ExportedEnv.Define("getProcessIdByName", new NativeGetProcessIdByName());
             ExportedEnv.Define("getModules", new NativeGetModules());
+            ExportedEnv.Define("terminate", new NativeTerminate());
+            ExportedEnv.Define("getCurrentProcess", new NativeGetCurrentProcess());
+            ExportedEnv.Define("getExecutablePath", new NativeGetExecutablePath());
+            ExportedEnv.Define("getWorkingPath", new NativeGetWorkingPath());
         }
 
         private class NativeList : ICallable
@@ -24,7 +28,7 @@ namespace Quartz.Runtime.Modules
             public object Call(Interpreter interpreter, List<object> arguments)
             {
                 return Process.GetProcesses()
-                    .Select(p => (object)$"{p.Id}:{p.ProcessName}")
+                    .Select(p => (object)p.ProcessName)
                     .ToList();
             }
             public override string ToString() => "<native fn Process.list>";
@@ -124,6 +128,81 @@ namespace Quartz.Runtime.Modules
                 }
             }
             public override string ToString() => "<native fn Process.getModules>";
+        }
+
+        private class NativeTerminate : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                int pid = Convert.ToInt32(arguments[0]);
+                try
+                {
+                    using (Process proc = Process.GetProcessById(pid))
+                    {
+                        proc.Kill();
+                        return true;
+                    }
+                }
+                catch { return false; }
+            }
+            public override string ToString() => "<native fn Process.terminate>";
+        }
+
+        private class NativeGetCurrentProcess : ICallable
+        {
+            public int Arity() => 0;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                return Process.GetCurrentProcess().Id;
+            }
+            public override string ToString() => "<native fn Process.getCurrentProcess>";
+        }
+
+        private class NativeGetExecutablePath : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                int pid = Convert.ToInt32(arguments[0]);
+                try
+                {
+                    using (Process proc = Process.GetProcessById(pid))
+                    {
+                        return proc.MainModule?.FileName ?? "";
+                    }
+                }
+                catch { return ""; }
+            }
+            public override string ToString() => "<native fn Process.getExecutablePath>";
+        }
+
+        private class NativeGetWorkingPath : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                int pid = Convert.ToInt32(arguments[0]);
+                try
+                {
+                    if (pid == System.Diagnostics.Process.GetCurrentProcess().Id)
+                    {
+                        return System.Environment.CurrentDirectory;
+                    }
+
+                    using (System.Diagnostics.Process proc = System.Diagnostics.Process.GetProcessById(pid))
+                    {
+                        string? exePath = proc.MainModule?.FileName;
+                        if (!string.IsNullOrEmpty(exePath))
+                        {
+                            return System.IO.Path.GetDirectoryName(exePath) ?? "";
+                        }
+                    }
+                }
+                catch { }
+                return "";
+            }
+            public override string ToString() => "<native fn Process.getWorkingPath>";
         }
     }
 }
