@@ -13,6 +13,10 @@ Interpreted by a C# engine, Quartz allows for seamless integration with Windows 
 - **🏗 Object-Oriented**: Support for Classes, Methods, and Objects.
 - **C-Like Syntax**: Familiar syntax for developers coming from C, C++, C#, or Java background.
 
+## 📚 Documentation
+
+For a deep dive into the language syntax, modules, and advanced features like FFI and Memory manipulation, please refer to the **[Quartz Language Guide](language_guide.md)**.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -34,10 +38,10 @@ You can run a Quartz script (`.qz`) by passing it as an argument to the interpre
 
 ```bash
 # Using dotnet run
-dotnet run -- Examples/shapes.qz
+dotnet run -- script.qz
 
 # Or using the built executable
-./bin/Debug/net8.0/Quartz.exe Examples/shapes.qz
+./bin/Debug/net9.0/Quartz.exe script.qz
 ```
 
 ## 💡 Example
@@ -59,10 +63,6 @@ func factorial(n) {
 
 Console.print("Factorial of 5 is:", factorial(5));
 ```
-
-## 📚 Documentation
-
-For a deep dive into the language syntax, modules, and advanced features like FFI and Memory manipulation, please refer to the **[Quartz Language Guide](docs/language_guide.md)**.
 
 ## 🛠 Advanced Usage (FFI)
 
