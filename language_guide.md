@@ -16,6 +16,7 @@ Welcome to the official documentation for the **Quartz** programming language. Q
     - [Conditional Statements (If/Else)](#conditional-statements)
     - [Switch/Case](#switch-case)
     - [Loops (While, For, Foreach)](#loops)
+    - [Enums](#enums)
     - [Error Handling (Try/Catch)](#error-handling)
 5. [Functions & Lambdas](#functions--lambdas)
     - [Function Definitions](#functions)
@@ -236,6 +237,22 @@ foreach (name in scores) {
 }
 ```
 
+### Enums <a name="enums"></a>
+Enums are used to define a set of named constants.
+
+```quartz
+enum Status {
+    Pending,
+    Active,
+    Inactive
+}
+
+auto myStatus = Status.Active;
+if (myStatus == Status.Active) {
+    Console.print("System is active!");
+}
+```
+
 ### Error Handling (Try/Catch) <a name="error-handling"></a>
 Quartz allows you to handle runtime errors gracefully using `try` and `catch` blocks.
 
@@ -377,10 +394,22 @@ Low-level memory access via the `Marshal` module.
 
 | Function | Description |
 | :--- | :--- |
-| `Marshal.alloc(size)` | Allocates memory. |
-| `Marshal.free(ptr)` | Frees memory. |
-| `Marshal.readInt(ptr)` | Reads 32-bit int. |
-| `Marshal.structureToPtr(obj, ptr)` | Copies struct to memory. |
+| `Marshal.alloc(size)` | Allocates `size` bytes of memory. Returns a `pointer`. |
+| `Marshal.free(ptr)` | Frees allocated memory at address. |
+| `Marshal.readInt(ptr)` | Reads a 32-bit integer. |
+| `Marshal.writeInt(ptr, val)` | Writes a 32-bit integer. |
+| `Marshal.readInt16(ptr)` | Reads a 16-bit integer (short). |
+| `Marshal.writeInt16(ptr, val)` | Writes a 16-bit integer (short). |
+| `Marshal.readInt64(ptr)` | Reads a 64-bit integer (long). |
+| `Marshal.writeInt64(ptr, val)` | Writes a 64-bit integer (long). |
+| `Marshal.readByte(ptr)` | Reads a single byte. |
+| `Marshal.writeByte(ptr, val)` | Writes a single byte. |
+| `Marshal.readDouble(ptr)` | Reads a 64-bit float (double). |
+| `Marshal.writeDouble(ptr, val)` | Writes a 64-bit float (double). |
+| `Marshal.readString(ptr)` | Reads an ANSI string from memory. |
+| `Marshal.readStruct(ptr, template)` | Reads a struct instance from memory. |
+| `Marshal.writeStruct(ptr, obj)` | Writes a struct instance to memory. |
+| `Marshal.structureToPtr(obj, ptr)` | Marshals a class instance to memory. |
 
 ### Introspection <a name="introspection"></a>
 Inspect values at runtime using `typeof(val)` and `sizeof(val)`.
@@ -404,34 +433,86 @@ auto calc = Calculator();
 Quartz includes several built-in modules available globally.
 
 ### Console <a name="console"></a>
-- `Console.print(...)`, `Console.readLine()`, `Console.clear()`
+- `Console.print(arg1, arg2, ...)`: Prints values followed by a newline.
+- `Console.writeLine(arg1, arg2, ...)`: Alias for `print`.
+- `Console.write(arg1, arg2, ...)`: Prints values without a newline.
+- `Console.readLine()`: Reads a line of text from standard input.
+- `Console.clear()`: Clears the console screen.
+- `Console.setTitle(title)`: Sets the current console window title.
 
 ### Math <a name="math"></a>
-- `Math.pi`, `Math.abs`, `Math.pow`, `Math.sqrt`, `Math.sin`, `Math.cos`, `Math.floor`, `Math.min`, `Math.max`
+- `Math.PI`: Returns the value of PI (3.14159...).
+- `Math.E`: Returns the value of E (2.71828...).
+- `Math.abs(val)`: Absolute value.
+- `Math.ceil(val)`: Ceiling.
+- `Math.floor(val)`: Floor.
+- `Math.sqrt(val)`: Square root.
+- `Math.sin(val)`, `Math.cos(val)`, `Math.tan(val)`: Trigonometric functions.
+- `Math.pow(base, exp)`: Power function.
+- `Math.round(val)`: Rounds to the nearest integer.
+- `Math.min(a, b)`, `Math.max(a, b)`: Minimum and maximum value.
 
 ### String <a name="string"></a>
-- `String.length`, `String.upper`, `String.lower`, `String.substring`, `String.replace`, `String.split`, `String.trim`
+- `String.length(str)`: Returns string length.
+- `String.upper(str)`: Converts to uppercase.
+- `String.lower(str)`: Converts to lowercase.
+- `String.substring(str, start, [len])`: Returns a portion of the string.
+- `String.replace(str, old, new)`: Replaces occurrences of a substring.
+- `String.split(str, delimiter)`: Splits string into an array.
+- `String.trim(str)`: Removes leading and trailing whitespace.
 
 ### IO (File System) <a name="io-file-system"></a>
-- `IO.readFile`, `IO.writeFile`, `IO.appendFile`, `IO.fileExists`, `IO.deleteFile`
+- `IO.readFile(path)`: Reads the entire content of a file as a string.
+- `IO.writeFile(path, content)`: Writes content to a file (overwrites).
+- `IO.appendFile(path, content)`: Appends content to the end of a file.
+- `IO.fileExists(path)`: Checks if a file exists.
+- `IO.deleteFile(path)`: Deletes a file.
 
 ### Thread <a name="thread"></a>
-- `Thread.sleep(ms)`, `Thread.create(func)`, `Thread.getCurrentId()`
+- `Thread.sleep(ms)`: Pauses execution for the specified milliseconds.
+- `Thread.create(func)`: Creates a new thread to execute the given function.
+- `Thread.getCurrentId()`: Returns the current thread's unique identifier.
 
 ### Process <a name="process"></a>
-- `Process.list()`, `Process.isRunning(pid)`, `Process.getModuleAddress(pid, name)`, `Process.terminate(pid)`
+- `Process.list()`: Returns a list of all running processes.
+- `Process.isRunning(pid_or_name)`: Checks if a process is running.
+- `Process.getModuleAddress(pid, name)`: Gets the base address of a module in a process.
+- `Process.getProcessIdByName(name)`: Retrieves the PID of a process by its name.
+- `Process.getModules(pid)`: Lists modules loaded in a process.
+- `Process.terminate(pid)`: Terminates a process.
+- `Process.getCurrentProcess()`: Returns information about the current process.
+- `Process.getExecutablePath()`: Returns the path to the current executable.
+- `Process.getWorkingPath()`: Returns the current working directory.
 
 ### Network <a name="network"></a>
-- `Network.get(url)`, `Network.post(url, data)`, `Network.downloadFile(url, path)`
+- `Network.get(url)`: Performs an HTTP GET request.
+- `Network.post(url, data)`: Performs an HTTP POST request.
+- `Network.downloadString(url)`: Downloads a string from a URL.
+- `Network.downloadBytes(url)`: Downloads raw bytes from a URL.
+- `Network.downloadFile(url, path)`: Downloads a file to the specified path.
 
 ### System <a name="system"></a>
-- `System.getOSVersion()`, `System.getMemoryStats()`, `System.getCPUUsage()`
+- `System.getOSVersion()`: Returns the OS version string.
+- `System.getMemoryStats()`: Returns a dictionary with memory usage information.
+- `System.getCPUUsage()`: Returns current CPU usage percentage.
+- `System.getMachineName()`: Returns the local machine name.
+- `System.getUserName()`: Returns the current user's name.
 
 ### Input <a name="input"></a>
 - `Input.isKeyDown(vKey)`, `Input.getMousePos()`
 
 ### Crypto <a name="crypto"></a>
-- `Crypto.sha256(data)`, `Crypto.md5(data)`, `Crypto.base64Encode`, `Crypto.base64Decode`
+- `Crypto.sha256(data)`: Computes SHA256 hash.
+- `Crypto.md5(data)`: Computes MD5 hash.
+- `Crypto.base64Encode(data)`: Encodes data to Base64.
+- `Crypto.base64Decode(data)`: Decodes Base64 data.
 
-### Env <a name="env"></a>
-- `Env.get(name)`, `Env.set(name, value)`
+### Window <a name="window"></a>
+- `Window.find(className, title)`: Finds a window by class or name. Returns a `pointer`.
+- `Window.getForeground()`: Returns a `pointer` to the current foreground window.
+- `Window.setTitle(hwnd, title)`: Sets a window's title.
+- `Window.show(hwnd, cmd)`: Shows or hides a window.
+- `Window.exists(hwnd)`: Checks if a window handle is valid.
+- `Window.setOpacity(hwnd, alpha)`: Sets window transparency (0-255).
+- `Window.getRect(hwnd)`: Returns a dictionary with window coordinates.
+- `Window.setTopmost(hwnd, bool)`: Sets or unsets topmost status.
