@@ -427,7 +427,7 @@ Low-level memory access via the `Marshal` module.
 | `Marshal.readFloat(ptr)` | Reads a 32-bit float. |
 | `Marshal.writeFloat(ptr, val)` | Writes a 32-bit float. |
 | `Marshal.invoke(func, args)` | Invokes an `ICallable` (function) with a list of arguments. |
-| `Marshal.ptrSize()` | Returns the size of a pointer (4 or 8 bytes). |
+| `Marshal.size()` | Returns the size of a pointer (4 or 8 bytes). |
 
 ### Introspection <a name="introspection"></a>
 Inspect values at runtime using `typeof(val)` and `sizeof(val)`.
