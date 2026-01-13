@@ -65,11 +65,12 @@ auto x = 10; // Inline comment
 ### Variables & Types
 Quartz is dynamically typed, but supports type annotations for clarity. The `auto` keyword is commonly used for type inference.
 
-**Keywords:** `auto`, `int`, `float`, `double`, `bool`, `string`, `pointer`
+**Keywords:** `auto`, `int`, `long`, `float`, `double`, `bool`, `string`, `pointer`
 
 ```quartz
 auto a = 10;            // Integer
 int b = 20;             // Explicit Integer
+long b2 = 1000000;      // 64-bit Integer
 double c = 3.14;        // Float/Double
 bool d = true;          // Boolean
 string e = "Hello";     // String
@@ -78,6 +79,14 @@ float g = 1.23f;        // Explicit Float
 ```
 
 **Note:** While you can use specific type keywords (`int`, `string`, etc.), the runtime is dynamic.
+
+### Hexadecimal Literals
+Quartz supports hexadecimal integer literals using the `0x` prefix.
+
+```quartz
+auto hex = 0xFF;        // 255
+auto color = 0xAABBCC;  // 11189196
+```
 
 ### String Interpolation
 Quartz supports string interpolation using the `$"..."` syntax.
@@ -410,6 +419,15 @@ Low-level memory access via the `Marshal` module.
 | `Marshal.readStruct(ptr, template)` | Reads a struct instance from memory. |
 | `Marshal.writeStruct(ptr, obj)` | Writes a struct instance to memory. |
 | `Marshal.structureToPtr(obj, ptr)` | Marshals a class instance to memory. |
+| `Marshal.readPtr(ptr)` | Reads a pointer/address from memory. |
+| `Marshal.writePtr(ptr, val)` | Writes a pointer/address to memory. |
+| `Marshal.stringToPtr(str)` | Allocates and copies ANSI string to memory. Returns `pointer`. |
+| `Marshal.stringToPtrUni(str)` | Allocates and copies Unicode string to memory. Returns `pointer`. |
+| `Marshal.callPtr(ptr, retType, [argTypes])` | Creates a native function wrapper for a function pointer. |
+| `Marshal.readFloat(ptr)` | Reads a 32-bit float. |
+| `Marshal.writeFloat(ptr, val)` | Writes a 32-bit float. |
+| `Marshal.invoke(func, args)` | Invokes an `ICallable` (function) with a list of arguments. |
+| `Marshal.ptrSize()` | Returns the size of a pointer (4 or 8 bytes). |
 
 ### Introspection <a name="introspection"></a>
 Inspect values at runtime using `typeof(val)` and `sizeof(val)`.
@@ -419,11 +437,17 @@ Console.print(typeof(10));    // "int"
 Console.print(sizeof("int")); // 4 (bytes)
 ```
 
-### Imports <a name="imports"></a>
+### Imports & Loading <a name="imports"></a>
 Reuse code from other files.
+
+| Function | Description |
+| :--- | :--- |
+| `import(path)` | Imports a module, executes it in its own environment, and exports its public members. |
+| `load(path)` | Executes the specified file in the *current* environment. |
+
 ```quartz
-import("math_utils.qz");
-auto calc = Calculator();
+// From code or REPL
+load("utils.qz");
 ```
 
 ---
