@@ -15,7 +15,9 @@ Interpreted by a C# engine, Quartz allows for seamless integration with Windows 
 
 ## 🚀 Getting Started
 
-[Getting Started](language_guide.md)
+## 📚 Documentation
+
+For a deep dive into the language syntax, modules, and advanced features like FFI and Memory manipulation, please refer to the **[Quartz Language Guide](language_guide.md)**.
 
 ### Prerequisites
 - [.NET 9.0 SDK](https://dotnet.microsoft.com/download) or later.
@@ -62,9 +64,6 @@ func factorial(n) {
 Console.print("Factorial of 5 is:", factorial(5));
 ```
 
-## 📚 Documentation
-
-For a deep dive into the language syntax, modules, and advanced features like FFI and Memory manipulation, please refer to the **[Quartz Language Guide](language_guide.md)**.
 
 ## 🛠 Advanced Usage (FFI)
 
@@ -81,3 +80,4 @@ msgBox("Hello from Native Windows API!");
 
 ---
 *Built with ❤️ by Furkan*
+
