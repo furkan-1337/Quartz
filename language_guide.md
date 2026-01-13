@@ -365,7 +365,7 @@ auto v2 = Vector2(5, 5);
 auto v3 = v1 + v2; // Operator Overloading
 ```
 
-**Supported Types in Structs:** `int`, `float`, `double`, `bool`, `pointer`, `string`.
+**Supported Types in Structs:** `int`, `long`, `float`, `double`, `bool`, `pointer`, `string`.
 
 ---
 
@@ -400,8 +400,8 @@ Low-level memory access via the `Marshal` module.
 | `Marshal.writeInt(ptr, val)` | Writes a 32-bit integer. |
 | `Marshal.readInt16(ptr)` | Reads a 16-bit integer (short). |
 | `Marshal.writeInt16(ptr, val)` | Writes a 16-bit integer (short). |
-| `Marshal.readInt64(ptr)` | Reads a 64-bit integer. |
-| `Marshal.writeInt64(ptr, val)` | Writes a 64-bit integer. |
+| `Marshal.readInt64(ptr)` | Reads a 64-bit integer (long). |
+| `Marshal.writeInt64(ptr, val)` | Writes a 64-bit integer (long). |
 | `Marshal.readByte(ptr)` | Reads a single byte. |
 | `Marshal.writeByte(ptr, val)` | Writes a single byte. |
 | `Marshal.readDouble(ptr)` | Reads a 64-bit float (double). |
@@ -433,87 +433,127 @@ auto calc = Calculator();
 Quartz includes several built-in modules available globally.
 
 ### Console <a name="console"></a>
-- `Console.print(arg1, arg2, ...)`: Prints values followed by a newline.
-- `Console.writeLine(arg1, arg2, ...)`: Alias for `print`.
-- `Console.write(arg1, arg2, ...)`: Prints values without a newline.
-- `Console.readLine()`: Reads a line of text from standard input.
-- `Console.clear()`: Clears the console screen.
-- `Console.setTitle(title)`: Sets the current console window title.
+
+| Function | Description |
+| :--- | :--- |
+| `print(arg1, arg2, ...)` | Prints values followed by a newline. |
+| `writeLine(arg1, arg2, ...)` | Alias for `print`. |
+| `write(arg1, arg2, ...)` | Prints values without a newline. |
+| `readLine()` | Reads a line of text from standard input. |
+| `clear()` | Clears the console screen. |
+| `setTitle(title)` | Sets the current console window title. |
 
 ### Math <a name="math"></a>
-- `Math.PI`: Returns the value of PI (3.14159...).
-- `Math.E`: Returns the value of E (2.71828...).
-- `Math.abs(val)`: Absolute value.
-- `Math.ceil(val)`: Ceiling.
-- `Math.floor(val)`: Floor.
-- `Math.sqrt(val)`: Square root.
-- `Math.sin(val)`, `Math.cos(val)`, `Math.tan(val)`: Trigonometric functions.
-- `Math.pow(base, exp)`: Power function.
-- `Math.round(val)`: Rounds to the nearest integer.
-- `Math.min(a, b)`, `Math.max(a, b)`: Minimum and maximum value.
+
+| Property/Function | Description |
+| :--- | :--- |
+| `PI` | Returns the value of PI (3.14159...). |
+| `E` | Returns the value of E (2.71828...). |
+| `abs(val)` | Absolute value. |
+| `ceil(val)` | Ceiling. |
+| `floor(val)` | Floor. |
+| `sqrt(val)` | Square root. |
+| `sin(val)`, `cos(val)`, `tan(val)` | Trigonometric functions. |
+| `pow(base, exp)` | Power function. |
+| `round(val)` | Rounds to the nearest integer. |
+| `min(a, b)`, `max(a, b)` | Minimum and maximum value. |
 
 ### String <a name="string"></a>
-- `String.length(str)`: Returns string length.
-- `String.upper(str)`: Converts to uppercase.
-- `String.lower(str)`: Converts to lowercase.
-- `String.substring(str, start, [len])`: Returns a portion of the string.
-- `String.replace(str, old, new)`: Replaces occurrences of a substring.
-- `String.split(str, delimiter)`: Splits string into an array.
-- `String.trim(str)`: Removes leading and trailing whitespace.
+
+| Function | Description |
+| :--- | :--- |
+| `length(str)` | Returns string length. |
+| `upper(str)` | Converts to uppercase. |
+| `lower(str)` | Converts to lowercase. |
+| `substring(str, start, [len])` | Returns a portion of the string. |
+| `replace(str, old, new)` | Replaces occurrences of a substring. |
+| `split(str, delimiter)` | Splits string into an array. |
+| `trim(str)` | Removes leading and trailing whitespace. |
 
 ### IO (File System) <a name="io-file-system"></a>
-- `IO.readFile(path)`: Reads the entire content of a file as a string.
-- `IO.writeFile(path, content)`: Writes content to a file (overwrites).
-- `IO.appendFile(path, content)`: Appends content to the end of a file.
-- `IO.fileExists(path)`: Checks if a file exists.
-- `IO.deleteFile(path)`: Deletes a file.
+
+| Function | Description |
+| :--- | :--- |
+| `readFile(path)` | Reads the entire content of a file as a string. |
+| `writeFile(path, content)` | Writes content to a file (overwrites). |
+| `appendFile(path, content)` | Appends content to the end of a file. |
+| `fileExists(path)` | Checks if a file exists. |
+| `deleteFile(path)` | Deletes a file. |
 
 ### Thread <a name="thread"></a>
-- `Thread.sleep(ms)`: Pauses execution for the specified milliseconds.
-- `Thread.create(func)`: Creates a new thread to execute the given function.
-- `Thread.getCurrentId()`: Returns the current thread's unique identifier.
+
+| Function | Description |
+| :--- | :--- |
+| `sleep(ms)` | Pauses execution for the specified milliseconds. |
+| `create(func)` | Creates a new thread to execute the given function. |
+| `getCurrentId()` | Returns the current thread's unique identifier. |
 
 ### Process <a name="process"></a>
-- `Process.list()`: Returns a list of all running processes.
-- `Process.isRunning(pid_or_name)`: Checks if a process is running.
-- `Process.getModuleAddress(pid, name)`: Gets the base address of a module in a process.
-- `Process.getProcessIdByName(name)`: Retrieves the PID of a process by its name.
-- `Process.getModules(pid)`: Lists modules loaded in a process.
-- `Process.terminate(pid)`: Terminates a process.
-- `Process.getCurrentProcess()`: Returns information about the current process.
-- `Process.getExecutablePath()`: Returns the path to the current executable.
-- `Process.getWorkingPath()`: Returns the current working directory.
+
+| Function | Description |
+| :--- | :--- |
+| `list()` | Returns a list of all running processes. |
+| `isRunning(pid_or_name)` | Checks if a process is running. |
+| `getModuleAddress(pid, name)` | Gets the base address of a module in a process. |
+| `getProcessIdByName(name)` | Retrieves the PID of a process by its name. |
+| `getModules(pid)` | Lists modules loaded in a process. |
+| `terminate(pid)` | Terminates a process. |
+| `getCurrentProcess()` | Returns information about the current process. |
+| `getExecutablePath()` | Returns the path to the current executable. |
+| `getWorkingPath()` | Returns the current working directory. |
 
 ### Network <a name="network"></a>
-- `Network.get(url)`: Performs an HTTP GET request.
-- `Network.post(url, data)`: Performs an HTTP POST request.
-- `Network.downloadString(url)`: Downloads a string from a URL.
-- `Network.downloadBytes(url)`: Downloads raw bytes from a URL.
-- `Network.downloadFile(url, path)`: Downloads a file to the specified path.
+
+| Function | Description |
+| :--- | :--- |
+| `get(url)` | Performs an HTTP GET request. |
+| `post(url, data)` | Performs an HTTP POST request. |
+| `downloadString(url)` | Downloads a string from a URL. |
+| `downloadBytes(url)` | Downloads raw bytes from a URL. |
+| `downloadFile(url, path)` | Downloads a file to the specified path. |
 
 ### System <a name="system"></a>
-- `System.getOSVersion()`: Returns the OS version string.
-- `System.getMemoryStats()`: Returns a dictionary with memory usage information.
-- `System.getCPUUsage()`: Returns current CPU usage percentage.
-- `System.getMachineName()`: Returns the local machine name.
-- `System.getUserName()`: Returns the current user's name.
+
+| Function | Description |
+| :--- | :--- |
+| `getOSVersion()` | Returns the OS version string. |
+| `getMemoryStats()` | Returns a dictionary with memory usage information. |
+| `getCPUUsage()` | Returns current CPU usage percentage. |
+| `getMachineName()` | Returns the local machine name. |
+| `getUserName()` | Returns the current user's name. |
 
 ### Input <a name="input"></a>
-- `Input.isKeyDown(vKey)`, `Input.getMousePos()`
+
+| Function | Description |
+| :--- | :--- |
+| `isKeyDown(vKey)` | Checks if a specific virtual key is held down. |
+| `getMousePos()` | Returns a dictionary with `x` and `y` coordinates. |
 
 ### Crypto <a name="crypto"></a>
-- `Crypto.sha256(data)`: Computes SHA256 hash.
-- `Crypto.md5(data)`: Computes MD5 hash.
-- `Crypto.base64Encode(data)`: Encodes data to Base64.
-- `Crypto.base64Decode(data)`: Decodes Base64 data.
+
+| Function | Description |
+| :--- | :--- |
+| `sha256(data)` | Computes SHA256 hash. |
+| `md5(data)` | Computes MD5 hash. |
+| `base64Encode(data)` | Encodes data to Base64. |
+| `base64Decode(data)` | Decodes Base64 data. |
 
 ### Window <a name="window"></a>
-- `Window.find(className, title)`: Finds a window by class or name. Returns a `pointer`.
-- `Window.getForeground()`: Returns a `pointer` to the current foreground window.
-- `Window.setTitle(hwnd, title)`: Sets a window's title.
-- `Window.show(hwnd, cmd)`: Shows or hides a window.
-- `Window.exists(hwnd)`: Checks if a window handle is valid.
-- `Window.setOpacity(hwnd, alpha)`: Sets window transparency (0-255).
-- `Window.getRect(hwnd)`: Returns a dictionary with window coordinates.
-- `Window.setTopmost(hwnd, bool)`: Sets or unsets topmost status.
 
+| Function | Description |
+| :--- | :--- |
+| `find(className, title)` | Finds a window by class or name. Returns a `pointer`. |
+| `getForeground()` | Returns a `pointer` to the current foreground window. |
+| `setTitle(hwnd, title)` | Sets a window's title. |
+| `show(hwnd, cmd)` | Shows or hides a window. |
+| `exists(hwnd)` | Checks if a window handle is valid. |
+| `setOpacity(hwnd, alpha)` | Sets window transparency (0-255). |
+| `getRect(hwnd)` | Returns a dictionary with window coordinates. |
+| `setTopmost(hwnd, bool)` | Sets or unsets topmost status. |
+
+### Env <a name="env"></a>
+
+| Function | Description |
+| :--- | :--- |
+| `get(name)` | Reads an environment variable. |
+| `set(name, value)` | Sets an environment variable. |
