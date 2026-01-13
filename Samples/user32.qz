@@ -1,0 +1,122 @@
+class User32 {
+    func init() {
+        this._LoadCursor = extern("user32.dll", "pointer", "LoadCursorA", "pointer", "int");
+        this._RegisterClassEx = extern("user32.dll", "int", "RegisterClassExA", "pointer");
+        this._CreateWindowEx = extern("user32.dll", "pointer", "CreateWindowExA", "int", "string", "string", "int", "int", "int", "int", "int", "pointer", "pointer", "pointer", "pointer");
+        this._SetLayeredWindowAttributes = extern("user32.dll", "bool", "SetLayeredWindowAttributes", "pointer", "int", "byte", "int");
+        this._ShowWindow = extern("user32.dll", "bool", "ShowWindow", "pointer", "int");
+        this._UpdateWindow = extern("user32.dll", "bool", "UpdateWindow", "pointer");
+        this._PostQuitMessage = extern("user32.dll", "void", "PostQuitMessage", "int");
+        this._InvalidateRect = extern("user32.dll", "bool", "InvalidateRect", "pointer", "pointer", "bool");
+        this._BeginPaint = extern("user32.dll", "pointer", "BeginPaint", "pointer", "pointer");
+        this._EndPaint = extern("user32.dll", "bool", "EndPaint", "pointer", "pointer");
+        this._DefWindowProc = extern("user32.dll", "long", "DefWindowProcA", "pointer", "int", "long", "long");
+        this._PeekMessage = extern("user32.dll", "bool", "PeekMessageA", "pointer", "pointer", "int", "int", "int");
+        this._GetMessage = extern("user32.dll", "bool", "GetMessageA", "pointer", "pointer", "int", "int");
+        this._TranslateMessage = extern("user32.dll", "bool", "TranslateMessage", "pointer");
+        this._DispatchMessage = extern("user32.dll", "long", "DispatchMessageA", "pointer");
+        this._GetSystemMetrics = extern("user32.dll", "int", "GetSystemMetrics", "int");
+        
+        this._GetDC = extern("user32.dll", "pointer", "GetDC", "pointer");
+        this._ReleaseDC = extern("user32.dll", "int", "ReleaseDC", "pointer", "pointer");
+        this._SetWindowTextA = extern("user32.dll", "bool", "SetWindowTextA", "pointer", "pointer");
+    }
+
+    // Constants
+    func IDC_ARROW() { return 32512; }
+    
+    // Window Styles
+    func WS_EX_LAYERED() { return 0x80000; }
+    func WS_EX_TRANSPARENT() { return 0x20; }
+    func WS_POPUP() { return 0x80000000; }
+    func WS_VISIBLE() { return 0x10000000; }
+    func WS_EX_TOPMOST() { return 0x8; }
+    
+    // Layered Window Attributes
+    func LWA_ALPHA() { return 0x2; }
+    func LWA_COLORKEY() { return 0x1; }
+    
+    // System Metrics
+    func SM_CXSCREEN() { return 0; }
+    func SM_CYSCREEN() { return 1; }
+    
+    // Show Window Commands
+    func SW_SHOW() { return 5; }
+
+    // Functions
+    func LoadCursor(hInstance, lpCursorName) {
+        return this._LoadCursor(hInstance, lpCursorName);
+    }
+
+    func RegisterClassEx(lpwcx) {
+        return this._RegisterClassEx(lpwcx);
+    }
+
+    func CreateWindowEx(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam) {
+        return this._CreateWindowEx(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    }
+
+    func SetLayeredWindowAttributes(hwnd, crKey, bAlpha, dwFlags) {
+        return this._SetLayeredWindowAttributes(hwnd, crKey, bAlpha, dwFlags);
+    }
+
+    func ShowWindow(hWnd, nCmdShow) {
+        return this._ShowWindow(hWnd, nCmdShow);
+    }
+
+    func UpdateWindow(hWnd) {
+        return this._UpdateWindow(hWnd);
+    }
+
+    func PostQuitMessage(nExitCode) {
+        this._PostQuitMessage(nExitCode);
+    }
+
+    func InvalidateRect(hWnd, lpRect, bErase) {
+        return this._InvalidateRect(hWnd, lpRect, bErase);
+    }
+
+    func BeginPaint(hWnd, lpPaint) {
+        return this._BeginPaint(hWnd, lpPaint);
+    }
+
+    func EndPaint(hWnd, lpPaint) {
+        return this._EndPaint(hWnd, lpPaint);
+    }
+
+    func DefWindowProc(hWnd, Msg, wParam, lParam) {
+        return this._DefWindowProc(hWnd, Msg, wParam, lParam);
+    }
+
+    func PeekMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg) {
+        return this._PeekMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
+    }
+
+    func GetMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax) {
+        return this._GetMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax);
+    }
+
+    func TranslateMessage(lpMsg) {
+        return this._TranslateMessage(lpMsg);
+    }
+
+    func DispatchMessage(lpMsg) {
+        return this._DispatchMessage(lpMsg);
+    }
+    
+    func GetSystemMetrics(nIndex) {
+        return this._GetSystemMetrics(nIndex);
+    }
+
+    func GetDC(hWnd) {
+        return this._GetDC(hWnd);
+    }
+
+    func ReleaseDC(hWnd, hDC) {
+        return this._ReleaseDC(hWnd, hDC);
+    }
+
+    func SetWindowTextA(hWnd, lpString) {
+        return this._SetWindowTextA(hWnd, lpString);
+    }
+}

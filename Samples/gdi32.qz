@@ -1,0 +1,106 @@
+class Gdi32 {
+    func init() {
+        this._GetStockObject = extern("gdi32.dll", "pointer", "GetStockObject", "int");
+        this._CreatePen = extern("gdi32.dll", "pointer", "CreatePen", "int", "int", "int");
+        this._CreateSolidBrush = extern("gdi32.dll", "pointer", "CreateSolidBrush", "int");
+        this._SelectObject = extern("gdi32.dll", "pointer", "SelectObject", "pointer", "pointer");
+        this._Rectangle = extern("gdi32.dll", "bool", "Rectangle", "pointer", "int", "int", "int", "int");
+        this._DeleteObject = extern("gdi32.dll", "bool", "DeleteObject", "pointer");
+        
+        this._CreateCompatibleDC = extern("gdi32.dll", "pointer", "CreateCompatibleDC", "pointer");
+        this._CreateCompatibleBitmap = extern("gdi32.dll", "pointer", "CreateCompatibleBitmap", "pointer", "int", "int");
+        this._BitBlt = extern("gdi32.dll", "bool", "BitBlt", "pointer", "int", "int", "int", "int", "pointer", "int", "int", "int");
+        this._DeleteDC = extern("gdi32.dll", "bool", "DeleteDC", "pointer");
+        
+        this._SetTextColor = extern("gdi32.dll", "int", "SetTextColor", "pointer", "int");
+        this._SetBkMode = extern("gdi32.dll", "int", "SetBkMode", "pointer", "int");
+        this._TextOut = extern("gdi32.dll", "bool", "TextOutA", "pointer", "int", "int", "string", "int");
+        this._MoveToEx = extern("gdi32.dll", "bool", "MoveToEx", "pointer", "int", "int", "pointer");
+        this._LineTo = extern("gdi32.dll", "bool", "LineTo", "pointer", "int", "int");
+        
+        this._FrameRect = extern("user32.dll", "int", "FrameRect", "pointer", "pointer", "pointer");
+        this._FillRect = extern("user32.dll", "int", "FillRect", "pointer", "pointer", "pointer");
+        // Helper
+        this._SetLayeredWindowAttributes = extern("user32.dll", "bool", "SetLayeredWindowAttributes", "pointer", "int", "byte", "int");
+    }
+
+    // Constants
+    func BLACK_BRUSH() { return 4; }
+    func NULL_BRUSH() { return 5; }
+    func PS_SOLID() { return 0; }
+    func TRANSPARENT() { return 1; }
+    func SRCCOPY() { return 0x00CC0020; }
+
+    // Functions
+    func GetStockObject(fnObject) {
+        return this._GetStockObject(fnObject);
+    }
+
+    func CreatePen(fnPenStyle, nWidth, crColor) {
+        return this._CreatePen(fnPenStyle, nWidth, crColor);
+    }
+
+    func CreateSolidBrush(crColor) {
+        return this._CreateSolidBrush(crColor);
+    }
+
+    func SelectObject(hdc, hgdiobj) {
+        return this._SelectObject(hdc, hgdiobj);
+    }
+
+    func Rectangle(hdc, left, top, right, bottom) {
+        return this._Rectangle(hdc, left, top, right, bottom);
+    }
+
+    func FrameRect(hdc, lpRect, hBrush) {
+        return this._FrameRect(hdc, lpRect, hBrush);
+    }
+
+    func FillRect(hdc, lpRect, hBrush) {
+        return this._FillRect(hdc, lpRect, hBrush);
+    }
+
+    func DeleteObject(hObject) {
+        return this._DeleteObject(hObject);
+    }
+
+    func CreateCompatibleDC(hdc) {
+        return this._CreateCompatibleDC(hdc);
+    }
+
+    func CreateCompatibleBitmap(hdc, cx, cy) {
+        return this._CreateCompatibleBitmap(hdc, cx, cy);
+    }
+
+    func BitBlt(hdcDest, x, y, cx, cy, hdcSrc, x1, y1, rop) {
+        return this._BitBlt(hdcDest, x, y, cx, cy, hdcSrc, x1, y1, rop);
+    }
+
+    func DeleteDC(hdc) {
+        return this._DeleteDC(hdc);
+    }
+
+    func SetTextColor(hdc, crColor) {
+        return this._SetTextColor(hdc, crColor);
+    }
+
+    func SetBkMode(hdc, iBkMode) {
+        return this._SetBkMode(hdc, iBkMode);
+    }
+
+    func SetLayeredWindow(hWnd, crKey, bAlpha, dwFlags) {
+        return this._SetLayeredWindowAttributes(hWnd, crKey, bAlpha, dwFlags);
+    }
+
+    func TextOut(hdc, x, y, lpString, cchString) {
+        return this._TextOut(hdc, x, y, lpString, cchString);
+    }
+
+    func MoveTo(hdc, x, y) {
+        return this._MoveToEx(hdc, x, y, 0);
+    }
+
+    func LineTo(hdc, x, y) {
+        return this._LineTo(hdc, x, y);
+    }
+}

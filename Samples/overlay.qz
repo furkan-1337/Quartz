@@ -1,0 +1,220 @@
+import("gdi32.qz");
+import("user32.qz");
+import("kernel32.qz");
+
+struct WNDCLASSEX {
+    int cbSize;
+    int style;
+    long lpfnWndProc;
+    int cbClsExtra;
+    int cbWndExtra;
+    long hInstance;
+    long hIcon;
+    long hCursor;
+    long hbrBackground;
+    long lpszMenuName;
+    long lpszClassName;
+    long hIconSm;
+}
+
+class GDIOverlay {
+    func init() {
+        this.hwnd = 0;
+        this.hInstance = 0;
+        this.className = "QuartzOverlayClass";
+        this.windowName = "Quartz Overlay";
+        this.width = 0;
+        this.height = 0;
+        this.hdc = 0;
+        this.running = false;
+        
+        // Initialize Win32 Libraries
+        this.user = User32();
+        this.gdi = Gdi32();
+        this.kernel = Kernel32();
+        
+        // Pre-allocate structures
+        this.ps_buffer = Marshal.alloc(72); // PAINTSTRUCT
+        this.msg_buffer = Marshal.alloc(48); // MSG
+        
+        // GDI Caches
+        this.pens = {};
+        this.brushes = {};
+    }
+
+    func createWindow(x, y, w, h) {
+        this.width = w;
+        this.height = h;
+        
+        // Get Module Handle
+        this.hInstance = this.kernel.GetModuleHandle(0);
+        
+        // WNDCLASSEX Structure
+        auto wndClass = Marshal.alloc(sizeof(WNDCLASSEX));
+        auto wndProcPtr = Callback.create(this.wndProc);
+        auto classNamePtr = Marshal.stringToPtr(this.className);
+        auto hCursor = this.user.LoadCursor(0, this.user.IDC_ARROW());
+        auto hBrush = this.gdi.GetStockObject(this.gdi.BLACK_BRUSH()); // BLACK_BRUSH
+        
+        auto wc = WNDCLASSEX();
+        wc.cbSize = sizeof(WNDCLASSEX);
+        wc.style = 3; // CS_HREDRAW | CS_VREDRAW
+        wc.lpfnWndProc = wndProcPtr.address;
+        wc.cbClsExtra = 0;
+        wc.cbWndExtra = 0;
+        wc.hInstance = this.hInstance;
+        wc.hIcon = 0;
+        wc.hCursor = hCursor;
+        wc.hbrBackground = hBrush;
+        wc.lpszMenuName = 0;
+        wc.lpszClassName = classNamePtr.address;
+        wc.hIconSm = 0;
+        
+        Marshal.writeStruct(wndClass, wc);
+        
+        // Register Class
+        auto atom = this.user.RegisterClassEx(wndClass);
+        if (atom == 0) {
+            Console.print("Failed to register window class");
+            return false;
+        }
+        
+        // Create Window
+        auto exStyle = this.user.WS_EX_LAYERED() + this.user.WS_EX_TOPMOST();
+        // Removed WS_EX_TRANSPARENT to allow click. Add it back if click-through needed.
+        // exStyle += this.user.WS_EX_TRANSPARENT(); 
+        
+        auto style = this.user.WS_POPUP() + this.user.WS_VISIBLE();
+        
+        this.hwnd = this.user.CreateWindowEx(
+            exStyle, this.className, this.windowName, style,
+            x, y, w, h,
+            0, 0, this.hInstance, 0
+        );
+        
+        if (this.hwnd == 0) {
+            Console.print("Failed to create window");
+            return false;
+        }
+        
+        // Set Layered Attributes (Opacity / Transparency)
+        // Using Color Key for transparency (black will be transparent)
+        this.user.SetLayeredWindowAttributes(
+            this.hwnd, 0, 255, this.user.LWA_COLORKEY()
+        );
+        
+        // Initialize Double Buffering
+        auto hdc = this.user.GetDC(this.hwnd);
+        this.hdcMem = this.gdi.CreateCompatibleDC(hdc);
+        this.hBitmap = this.gdi.CreateCompatibleBitmap(hdc, w, h);
+        this.gdi.SelectObject(this.hdcMem, this.hBitmap);
+        this.user.ReleaseDC(this.hwnd, hdc);
+
+        // Show Window
+        this.user.ShowWindow(this.hwnd, this.user.SW_SHOW());
+        this.user.UpdateWindow(this.hwnd);
+        
+        return true;
+    }
+
+    func wndProc(hwnd, msg, wParam, lParam) {
+        // WM_DESTROY = 0x0002
+        if (msg == 2) { // WM_DESTROY
+            this.running = false;
+            this.user.PostQuitMessage(0);
+            return 0;
+        }
+        
+        // WM_PAINT = 0x000F
+        if (msg == 15) {
+            auto hdc = this.user.BeginPaint(hwnd, this.ps_buffer);
+            
+            // 1. Clear memory DC with Black (Colorkey)
+            this.gdi.SelectObject(this.hdcMem, this.gdi.GetStockObject(this.gdi.BLACK_BRUSH()));
+            this.gdi.Rectangle(this.hdcMem, 0, 0, this.width, this.height);
+            
+            // 2. Draw to memory DC
+            this.onDraw(this.hdcMem);
+            
+            // 3. BitBlt to window DC
+            this.gdi.BitBlt(hdc, 0, 0, this.width, this.height, this.hdcMem, 0, 0, this.gdi.SRCCOPY());
+            
+            this.user.EndPaint(hwnd, this.ps_buffer);
+            return 0;
+        }
+        
+        // DefWindowProc
+        return this.user.DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+    func onDraw(hdc) {
+        // Clear background
+        // Override this method in subclass or assign a function to customize drawing
+        // Example clear for good measure (though class bg handles it)
+        // this.gdi.SelectObject(hdc, this.gdi.GetStockObject(this.gdi.BLACK_BRUSH()));
+        // this.gdi.Rectangle(hdc, 0, 0, this.width, this.height);
+    }
+
+    func run() {
+        this.running = true;
+        
+        while (this.running) {
+            if (this.user.GetMessage(this.msg_buffer, 0, 0, 0)) {
+                this.user.TranslateMessage(this.msg_buffer);
+                this.user.DispatchMessage(this.msg_buffer);
+            } else {
+                this.running = false;
+            }
+        }
+    }
+    
+    // Drawing Helpers
+    func drawText(hdc, x, y, text, color) {
+        this.gdi.SetTextColor(hdc, color);
+        this.gdi.SetBkMode(hdc, this.gdi.TRANSPARENT());
+        this.gdi.TextOut(hdc, x, y, text, text.length);
+    }
+    
+    func getPen(crColor) {
+        if (crColor == null) crColor = 0xFFFFFF;
+        auto key = "pen_" + crColor;
+        if (this.pens == null) this.pens = {};
+        if (this.pens[key] != null) {
+            return this.pens[key];
+        }
+        auto pen = this.gdi.CreatePen(this.gdi.PS_SOLID(), 1, crColor);
+        this.pens[key] = pen;
+        return pen;
+    }
+
+    func getBrush(crColor) {
+        if (crColor == null) crColor = 0xFFFFFF;
+        auto key = "brush_" + crColor;
+        if (this.brushes == null) this.brushes = {};
+        if (this.brushes[key] != null) {
+            return this.brushes[key];
+        }
+        auto brush = this.gdi.CreateSolidBrush(crColor);
+        this.brushes[key] = brush;
+        return brush;
+    }
+
+    func drawRect(hdc, x, y, w, h, crColor) {
+        auto hPen = this.getPen(crColor);
+        auto hOldPen = this.gdi.SelectObject(hdc, hPen);
+        auto hOldBrush = this.gdi.SelectObject(hdc, this.gdi.GetStockObject(this.gdi.NULL_BRUSH()));
+        
+        this.gdi.Rectangle(hdc, x, y, x + w, y + h);
+        
+        this.gdi.SelectObject(hdc, hOldBrush);
+        this.gdi.SelectObject(hdc, hOldPen);
+    }
+    
+    func getScreenWidth() {
+        return this.user.GetSystemMetrics(this.user.SM_CXSCREEN());
+    }
+    
+    func getScreenHeight() {
+        return this.user.GetSystemMetrics(this.user.SM_CYSCREEN());
+    }
+}

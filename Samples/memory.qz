@@ -1,0 +1,129 @@
+auto _OpenProcess = extern("kernel32.dll", "pointer", "OpenProcess", "int", "bool", "int");
+auto _ReadProcessMemory = extern("kernel32.dll", "bool", "ReadProcessMemory", "pointer", "pointer", "pointer", "int", "pointer");
+auto _WriteProcessMemory = extern("kernel32.dll", "bool", "WriteProcessMemory", "pointer", "pointer", "pointer", "int", "pointer");
+auto _CloseHandle = extern("kernel32.dll", "bool", "CloseHandle", "pointer");
+
+class Memory {
+    func init() {
+        this.hProcess = 0;
+    }
+
+    func initialize(pid) {
+        // PROCESS_ALL_ACCESS = 0x1F0FFF
+        this.hProcess = _OpenProcess(0x1F0FFF, false, pid);
+        return this.hProcess != 0;
+    }
+
+    func readRaw(address, size) {
+        if (this.hProcess == 0) return null;
+        
+        auto buffer = Marshal.alloc(size);
+        auto lpBytesRead = Marshal.alloc(8);
+        
+        auto success = _ReadProcessMemory(
+            this.hProcess, address, buffer, size, lpBytesRead
+        );
+        
+        Marshal.free(lpBytesRead);
+        
+        if (!success) {
+            Marshal.free(buffer);
+            return null;
+        }
+        
+        return buffer;
+    }
+
+    func readInt(address) {
+        if (this.hProcess == 0) return 0;
+        auto buffer = Marshal.alloc(4);
+        auto lpBytesRead = Marshal.alloc(8);
+        auto success = _ReadProcessMemory(this.hProcess, address, buffer, 4, lpBytesRead);
+        auto val = 0;
+        if (success) val = Marshal.readInt(buffer);
+        Marshal.free(buffer);
+        Marshal.free(lpBytesRead);
+        return val;
+    }
+
+    func readLong(address) {
+        if (this.hProcess == 0) return 0;
+        auto buffer = Marshal.alloc(8);
+        auto lpBytesRead = Marshal.alloc(8);
+        auto success = _ReadProcessMemory(this.hProcess, address, buffer, 8, lpBytesRead);
+        auto val = 0;
+        if (success) val = Marshal.readInt64(buffer);
+        Marshal.free(buffer);
+        Marshal.free(lpBytesRead);
+        return val;
+    }
+
+    func readFloat(address) {
+        if (this.hProcess == 0) return 0.0;
+        auto buffer = Marshal.alloc(4);
+        auto lpBytesRead = Marshal.alloc(8);
+        auto success = _ReadProcessMemory(this.hProcess, address, buffer, 4, lpBytesRead);
+        auto val = 0.0;
+        if (success) val = Marshal.readFloat(buffer);
+        Marshal.free(buffer);
+        Marshal.free(lpBytesRead);
+        return val;
+    }
+
+    func readDouble(address) {
+        if (this.hProcess == 0) return 0.0;
+        auto buffer = Marshal.alloc(8);
+        auto lpBytesRead = Marshal.alloc(8);
+        auto success = _ReadProcessMemory(this.hProcess, address, buffer, 8, lpBytesRead);
+        auto val = 0.0;
+        if (success) val = Marshal.readDouble(buffer);
+        Marshal.free(buffer);
+        Marshal.free(lpBytesRead);
+        return val;
+    }
+
+    func readByte(address) {
+        if (this.hProcess == 0) return 0;
+        auto buffer = Marshal.alloc(1);
+        auto lpBytesRead = Marshal.alloc(8);
+        auto success = _ReadProcessMemory(this.hProcess, address, buffer, 1, lpBytesRead);
+        auto val = 0;
+        if (success) val = Marshal.readByte(buffer);
+        Marshal.free(buffer);
+        Marshal.free(lpBytesRead);
+        return val;
+    }
+
+    func readString(address, maxLength) {
+        if (this.hProcess == 0) return "";
+        if (maxLength == null) maxLength = 256;
+        auto buffer = Marshal.alloc(maxLength);
+        auto lpBytesRead = Marshal.alloc(8);
+        auto success = _ReadProcessMemory(this.hProcess, address, buffer, maxLength, lpBytesRead);
+        
+        auto result = "";
+        if (success) {
+            for (auto i = 0; i < maxLength; i = i + 1) {
+                auto b = Marshal.readByte(buffer + i);
+                if (b == 0) break;
+                result = result + Converter.byteToChar(b);
+            }
+        }
+        
+        Marshal.free(buffer);
+        Marshal.free(lpBytesRead);
+        return result;
+    }
+
+    func readBool(address) {
+        auto b = this.readByte(address);
+        return b != 0;
+    }
+
+    func close() {
+        if (this.hProcess != 0) {
+            _CloseHandle(this.hProcess);
+            this.hProcess = 0;
+        }
+    }
+}

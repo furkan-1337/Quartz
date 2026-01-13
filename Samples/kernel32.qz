@@ -1,0 +1,14 @@
+class Kernel32 {
+    func init() {
+        this._GetModuleHandle = extern("kernel32.dll", "pointer", "GetModuleHandleA", "pointer");
+        this._GetTickCount = extern("kernel32.dll", "int", "GetTickCount");
+    }
+
+    func GetModuleHandle(lpModuleName) {
+        return this._GetModuleHandle(lpModuleName);
+    }
+
+    func GetTickCount() {
+        return this._GetTickCount();
+    }
+}
