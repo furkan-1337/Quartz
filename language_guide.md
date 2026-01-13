@@ -101,7 +101,34 @@ Console.print($"Welcome to {name} v{version}!");
 Expressions inside `{}` are automatically evaluated and converted to strings.
 
 ### Expressions & Operators
-Quartz supports standard arithmetic and comparison operators, as well as logical operators with short-circuiting.
+Quartz supports standard arithmetic, comparison, and logical operators.
+
+#### Arithmetic & Assignment Operators
+- `+`, `-`, `*`, `/`: Basic arithmetic.
+- `++`, `--`: Increment and decrement (both **Prefix** and **Postfix**).
+- `=`, `+=`, `-=`, `*=`, `/=`: Assignment and compound assignment.
+
+```quartz
+int i = 0;
+i++;         // i is 1
+++i;         // i is 2
+Console.print(i--); // prints 2, i becomes 1
+
+i += 10;     // i is 11
+i -= 5;      // i is 6
+i *= 2;      // i is 12
+i /= 3;      // i is 4
+```
+
+Compound assignments also work on **struct fields**, **array elements**, and **dictionary values**:
+
+```quartz
+ts.val += 10;
+arr[0] *= 2;
+dict["score"] += 100;
+```
+Console.print(--i); // prints 0, i becomes 0
+```
 
 #### Logical Operators
 - `&&` (Logical AND): Returns true if both operands are true. Short-circuits if the first operand is false.
