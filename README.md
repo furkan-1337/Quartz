@@ -13,8 +13,6 @@ Interpreted by a C# engine, Quartz allows for seamless integration with Windows 
 - **🏗 Object-Oriented**: Support for Classes, Methods, and Objects.
 - **C-Like Syntax**: Familiar syntax for developers coming from C, C++, C#, or Java background.
 
-## 🚀 Getting Started
-
 ## 📚 Documentation
 
 For a deep dive into the language syntax, modules, and advanced features like FFI and Memory manipulation, please refer to the **[Quartz Language Guide](language_guide.md)**.
@@ -80,4 +78,5 @@ msgBox("Hello from Native Windows API!");
 
 ---
 *Built with ❤️ by Furkan*
+
 
