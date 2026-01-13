@@ -365,7 +365,7 @@ auto v2 = Vector2(5, 5);
 auto v3 = v1 + v2; // Operator Overloading
 ```
 
-**Supported Types in Structs:** `int`, `long`, `float`, `double`, `bool`, `pointer`, `string`.
+**Supported Types in Structs:** `int`, `float`, `double`, `bool`, `pointer`, `string`.
 
 ---
 
@@ -400,8 +400,8 @@ Low-level memory access via the `Marshal` module.
 | `Marshal.writeInt(ptr, val)` | Writes a 32-bit integer. |
 | `Marshal.readInt16(ptr)` | Reads a 16-bit integer (short). |
 | `Marshal.writeInt16(ptr, val)` | Writes a 16-bit integer (short). |
-| `Marshal.readInt64(ptr)` | Reads a 64-bit integer (long). |
-| `Marshal.writeInt64(ptr, val)` | Writes a 64-bit integer (long). |
+| `Marshal.readInt64(ptr)` | Reads a 64-bit integer. |
+| `Marshal.writeInt64(ptr, val)` | Writes a 64-bit integer. |
 | `Marshal.readByte(ptr)` | Reads a single byte. |
 | `Marshal.writeByte(ptr, val)` | Writes a single byte. |
 | `Marshal.readDouble(ptr)` | Reads a 64-bit float (double). |
@@ -516,3 +516,4 @@ Quartz includes several built-in modules available globally.
 - `Window.setOpacity(hwnd, alpha)`: Sets window transparency (0-255).
 - `Window.getRect(hwnd)`: Returns a dictionary with window coordinates.
 - `Window.setTopmost(hwnd, bool)`: Sets or unsets topmost status.
+
