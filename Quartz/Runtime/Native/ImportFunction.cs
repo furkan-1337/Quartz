@@ -35,31 +35,32 @@ namespace Quartz.Runtime.Native
 
             string content = File.ReadAllText(fullPath);
 
-            
-            
+
+
             Environment moduleEnv = new Environment(interpreter.global);
             Module module = new Module(moduleEnv);
 
-            
+
             cache[fullPath] = module;
 
             try
             {
-                Lexer lexer = new Lexer(content);
+                Lexer lexer = new Lexer(content, Path.GetFileName(fullPath));
                 lexer.Tokenize();
                 Parser parser = new Parser(lexer.Tokens);
                 List<Stmt> statements = parser.Parse();
 
+                interpreter.Resolve(statements);
                 interpreter.ExecuteBlock(statements, moduleEnv);
             }
             catch
             {
-                
+
                 cache.Remove(fullPath);
                 throw;
             }
 
-            
+
             foreach (var kvp in module.ExportedEnv.Values)
             {
                 interpreter.CurrentEnvironment.Define(kvp.Key, kvp.Value);
@@ -69,5 +70,3 @@ namespace Quartz.Runtime.Native
         }
     }
 }
-
-

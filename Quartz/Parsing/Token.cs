@@ -14,16 +14,18 @@ namespace Quartz.Parsing
         Greater, GreaterEqual, Less, LessEqual,
         Arrow,
         Auto,
-        Int, Double, Float, Bool, StringType, Pointer,
+        Int, Long, Double, Float, Bool, StringType, Pointer,
         Boolean,
         Identifier, String, Number,
         If, Else, While, For,
         Func, Return,
         Class, Struct, This,
         And, Or,
+        BitwiseAnd, BitwiseOr, BitwiseXor, BitwiseNot,
+        ShiftLeft, ShiftRight,
         Foreach, In,
         Try, Catch,
-        Switch, Case, Default, Break,
+        Switch, Case, Default, Break, Continue,
         Base,
         Enum,
         EndOfFile
@@ -35,6 +37,7 @@ namespace Quartz.Parsing
         public string Value { get; set; } = string.Empty;
         public int Line { get; init; }
         public int Column { get; init; }
+        public string File { get; init; } = "unknown";
         public override string ToString() => string.IsNullOrEmpty(Value) ? $" {Type} " : $" {Type} : {Value} ";
     }
 }

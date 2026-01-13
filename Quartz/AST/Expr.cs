@@ -17,6 +17,8 @@ namespace Quartz.AST
     class VariableExpr : Expr
     {
         public string Name;
+        internal int? Distance;
+        internal int? SlotIndex;
     }
 
     class BinaryExpr : Expr
@@ -30,6 +32,8 @@ namespace Quartz.AST
     {
         public string Name;
         public Expr Value;
+        internal int? Distance;
+        internal int? SlotIndex;
     }
 
     class CallExpr : Expr

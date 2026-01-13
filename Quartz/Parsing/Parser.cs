@@ -31,7 +31,7 @@ namespace Quartz.Parsing
 
         private Stmt ParseStatement()
         {
-            if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Double) || Check(TokenType.Float) || Check(TokenType.Bool) || Check(TokenType.StringType) || Check(TokenType.Pointer))
+            if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Long) || Check(TokenType.Double) || Check(TokenType.Float) || Check(TokenType.Bool) || Check(TokenType.StringType) || Check(TokenType.Pointer))
                 return VarDeclaration();
 
             if (Match(TokenType.LeftBrace))
@@ -73,7 +73,20 @@ namespace Quartz.Parsing
             if (Match(TokenType.Break))
                 return BreakStatement();
 
+            if (Match(TokenType.Break))
+                return BreakStatement();
+
+            if (Match(TokenType.Continue))
+                return ContinueStatement();
+
             return ExpressionStatement();
+        }
+
+        private Stmt ContinueStatement()
+        {
+            Token keyword = Previous();
+            Consume(TokenType.Semicolon, "Expected ';' after 'continue'.");
+            return new ContinueStmt { Keyword = keyword };
         }
 
         private Stmt Function(string kind)
@@ -87,7 +100,7 @@ namespace Quartz.Parsing
                 {
                     if (parameters.Count >= 255)
                     {
-                        
+
                         Console.WriteLine("Can't have more than 255 parameters.");
                     }
 
@@ -150,7 +163,7 @@ namespace Quartz.Parsing
             {
                 initializer = null;
             }
-            else if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Double) || Check(TokenType.Float) || Check(TokenType.Bool) || Check(TokenType.StringType))
+            else if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Long) || Check(TokenType.Double) || Check(TokenType.Float) || Check(TokenType.Bool) || Check(TokenType.StringType))
             {
                 initializer = VarDeclaration();
             }
@@ -175,45 +188,22 @@ namespace Quartz.Parsing
 
             Stmt body = ParseStatement();
 
-            if (increment != null)
+            return new ForStmt
             {
-                body = new BlockStmt
-                {
-                    Statements = new List<Stmt>
-                    {
-                        body,
-                        new ExpressionStmt { Expression = increment }
-                    }
-                };
-            }
-
-            if (condition == null)
-            {
-                condition = new LiteralExpr { Value = true };
-            }
-
-            body = new WhileStmt { Condition = condition, Body = body };
-
-            if (initializer != null)
-            {
-                body = new BlockStmt { Statements = new List<Stmt> { initializer, body } };
-            }
-
-            if (initializer != null)
-            {
-                body = new BlockStmt { Statements = new List<Stmt> { initializer, body } };
-            }
-
-            return body;
+                Initializer = initializer,
+                Condition = condition,
+                Increment = increment,
+                Body = body
+            };
         }
 
         private Stmt ForeachStatement()
         {
             Consume(TokenType.LeftParen, "Expected '(' after 'foreach'.");
 
-            
-            
-            if (Match(TokenType.Auto)) {  }
+
+
+            if (Match(TokenType.Auto)) { }
 
             Token variable = Consume(TokenType.Identifier, "Expected variable name after 'foreach ('.");
             Consume(TokenType.In, "Expected 'in' after variable name.");
@@ -262,7 +252,7 @@ namespace Quartz.Parsing
                     Consume(TokenType.Colon, "Expected ':' after case value.");
 
                     List<Stmt> statements = new();
-                    
+
                     while (!Check(TokenType.Case) && !Check(TokenType.Default) && !Check(TokenType.RightBrace) && !IsAtEnd())
                     {
                         statements.Add(ParseStatement());
@@ -322,11 +312,11 @@ namespace Quartz.Parsing
 
         Stmt VarDeclaration()
         {
-            
-            
-            if (Match(TokenType.Auto, TokenType.Int, TokenType.Double, TokenType.Float, TokenType.Bool, TokenType.StringType, TokenType.Pointer))
+
+
+            if (Match(TokenType.Auto, TokenType.Int, TokenType.Long, TokenType.Double, TokenType.Float, TokenType.Bool, TokenType.StringType, TokenType.Pointer))
             {
-                
+
             }
 
             Token name = Consume(TokenType.Identifier, "Expected variable name");
@@ -362,7 +352,7 @@ namespace Quartz.Parsing
             List<FunctionStmt> methods = new();
             while (!Check(TokenType.RightBrace) && !IsAtEnd())
             {
-                
+
                 if (Match(TokenType.Func))
                 {
                     var funcStmt = (FunctionStmt)Function("method");
@@ -396,7 +386,7 @@ namespace Quartz.Parsing
                 }
                 else
                 {
-                    if (!Match(TokenType.Int, TokenType.Double, TokenType.Float, TokenType.Bool, TokenType.StringType, TokenType.Pointer, TokenType.Auto))
+                    if (!Match(TokenType.Int, TokenType.Long, TokenType.Double, TokenType.Float, TokenType.Bool, TokenType.StringType, TokenType.Pointer, TokenType.Auto))
                         throw new Exception($"Expected type in struct field at line {Peek().Line}");
 
                     Token type = Previous();
@@ -455,31 +445,31 @@ namespace Quartz.Parsing
                 }
                 else if (expr is IndexExpr index)
                 {
-                    
-                    
-                    
-                    
-                    
 
-                    
-                    
-                    
 
-                    
-                    
-                    
 
-                    
-                    
-                    
 
-                    
-                    
-                    
 
-                    
-                    
-                    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     return new SetIndexExpr { Object = index.Object, Bracket = index.Bracket, Index = index.Index, Value = value };
                 }
 
@@ -505,19 +495,55 @@ namespace Quartz.Parsing
 
         Expr LogicAnd()
         {
-            Expr expr = Equality();
+            Expr expr = BitwiseOr();
 
             while (Match(TokenType.And))
             {
                 Token op = Previous();
-                Expr right = Equality();
+                Expr right = BitwiseOr();
                 expr = new LogicalExpr { Left = expr, Operator = op, Right = right };
             }
 
             return expr;
         }
 
-        
+        Expr BitwiseOr()
+        {
+            Expr expr = BitwiseXor();
+            while (Match(TokenType.BitwiseOr))
+            {
+                Token op = Previous();
+                Expr right = BitwiseXor();
+                expr = new BinaryExpr { Left = expr, Operator = op, Right = right };
+            }
+            return expr;
+        }
+
+        Expr BitwiseXor()
+        {
+            Expr expr = BitwiseAnd();
+            while (Match(TokenType.BitwiseXor))
+            {
+                Token op = Previous();
+                Expr right = BitwiseAnd();
+                expr = new BinaryExpr { Left = expr, Operator = op, Right = right };
+            }
+            return expr;
+        }
+
+        Expr BitwiseAnd()
+        {
+            Expr expr = Equality();
+            while (Match(TokenType.BitwiseAnd))
+            {
+                Token op = Previous();
+                Expr right = Equality();
+                expr = new BinaryExpr { Left = expr, Operator = op, Right = right };
+            }
+            return expr;
+        }
+
+
         Expr Equality()
         {
             Expr expr = Comparison();
@@ -534,19 +560,31 @@ namespace Quartz.Parsing
 
         Expr Comparison()
         {
-            Expr expr = Term();
+            Expr expr = Shift();
 
             while (Match(TokenType.Greater, TokenType.GreaterEqual, TokenType.Less, TokenType.LessEqual))
             {
                 Token op = Previous();
-                Expr right = Term();
+                Expr right = Shift();
                 expr = new BinaryExpr { Left = expr, Operator = op, Right = right };
             }
 
             return expr;
         }
 
-        
+        Expr Shift()
+        {
+            Expr expr = Term();
+            while (Match(TokenType.ShiftLeft, TokenType.ShiftRight))
+            {
+                Token op = Previous();
+                Expr right = Term();
+                expr = new BinaryExpr { Left = expr, Operator = op, Right = right };
+            }
+            return expr;
+        }
+
+
         Expr Term()
         {
             Expr expr = Factor();
@@ -567,7 +605,7 @@ namespace Quartz.Parsing
             return expr;
         }
 
-        
+
         Expr Factor()
         {
             Expr expr = Unary();
@@ -590,7 +628,7 @@ namespace Quartz.Parsing
 
         Expr Unary()
         {
-            if (Match(TokenType.Bang, TokenType.Minus))
+            if (Match(TokenType.Bang, TokenType.Minus, TokenType.BitwiseNot))
             {
                 Token @operator = Previous();
                 Expr right = Unary();
@@ -640,7 +678,7 @@ namespace Quartz.Parsing
                 {
                     if (arguments.Count >= 255)
                     {
-                        
+
                     }
                     arguments.Add(Expression());
                 } while (Match(TokenType.Comma));
@@ -651,7 +689,7 @@ namespace Quartz.Parsing
             return new CallExpr { Callee = callee, Paren = paren, Arguments = arguments };
         }
 
-        
+
         Expr Primary()
         {
             if (Match(TokenType.Number))
@@ -659,7 +697,7 @@ namespace Quartz.Parsing
                 string value = Previous().Value;
                 if (value.StartsWith("0x") || value.StartsWith("0X"))
                 {
-                    return new LiteralExpr { Value = Convert.ToInt32(value.Substring(2), 16) };
+                    return new LiteralExpr { Value = Convert.ToInt64(value.Substring(2), 16) };
                 }
                 if (value.Contains('.'))
                     return new LiteralExpr { Value = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture) };
@@ -691,25 +729,25 @@ namespace Quartz.Parsing
 
             if (Match(TokenType.LeftParen))
             {
-                
-                
-                
-                
+
+
+
+
 
                 int savedCurrent = current;
                 bool isLambda = false;
 
-                
+
                 if (Check(TokenType.RightParen))
                 {
-                    
+
                     if (current + 1 < tokens.Count && tokens[current + 1].Type == TokenType.Arrow)
                         isLambda = true;
                 }
                 else
                 {
-                    
-                    
+
+
                     int temp = current;
                     while (temp < tokens.Count && tokens[temp].Type == TokenType.Identifier)
                     {

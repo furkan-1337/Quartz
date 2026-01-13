@@ -12,8 +12,8 @@ namespace Quartz.Runtime.Types
         private readonly List<Quartz.Parsing.Token> parameters;
         private readonly List<Stmt> body;
         private readonly Environment closure;
-        private readonly FunctionStmt declaration; 
-        
+        private readonly FunctionStmt declaration;
+
 
         public Function(FunctionStmt declaration, Environment closure)
         {
@@ -37,19 +37,23 @@ namespace Quartz.Runtime.Types
 
         public object Call(Interpreter interpreter, List<object> arguments)
         {
-            Environment environment = new Environment(closure);
-            for (int i = 0; i < parameters.Count; i++)
-            {
-                environment.Define(parameters[i].Value, arguments[i]);
-            }
-
+            Environment environment = Environment.Rent(closure);
             try
             {
+                for (int i = 0; i < parameters.Count; i++)
+                {
+                    environment.DefineSlot(i, arguments[i]);
+                }
+
                 interpreter.ExecuteBlock(this.body, environment);
             }
             catch (ReturnException returnValue)
             {
                 return returnValue.Value;
+            }
+            finally
+            {
+                Environment.Return(environment);
             }
 
             return null;
@@ -72,5 +76,3 @@ namespace Quartz.Runtime.Types
         }
     }
 }
-
-

@@ -9,10 +9,19 @@ namespace Quartz.AST
 {
     abstract class Stmt { }
 
+    class ForStmt : Stmt
+    {
+        public Stmt Initializer;
+        public Expr Condition;
+        public Expr Increment;
+        public Stmt Body;
+    }
+
     class VarDeclStmt : Stmt
     {
         public string Name;
         public Expr Initializer;
+        internal int? SlotIndex;
     }
 
     class ExpressionStmt : Stmt
@@ -23,6 +32,7 @@ namespace Quartz.AST
     class BlockStmt : Stmt
     {
         public List<Stmt> Statements;
+        internal bool RequiresEnvironment;
     }
 
     class IfStmt : Stmt
@@ -54,7 +64,7 @@ namespace Quartz.AST
     class ClassStmt : Stmt
     {
         public Token Name;
-        public Expr Superclass; 
+        public Expr Superclass;
         public List<FunctionStmt> Methods;
     }
 
@@ -76,6 +86,7 @@ namespace Quartz.AST
         public Token VariableName;
         public Expr Collection;
         public Stmt Body;
+        internal int? SlotIndex;
     }
 
     class TryStmt : Stmt
@@ -83,14 +94,15 @@ namespace Quartz.AST
         public Stmt TryBlock;
         public Stmt CatchBlock;
         public Token ErrorVariable;
+        internal int? SlotIndex;
     }
 
     class SwitchCase
     {
-        public Expr Value; 
-        
-        
-        
+        public Expr Value;
+
+
+
         public List<Stmt> Body;
     }
 
@@ -106,6 +118,11 @@ namespace Quartz.AST
         public Token Keyword;
     }
 
+    class ContinueStmt : Stmt
+    {
+        public Token Keyword;
+    }
+
 
 
     class EnumStmt : Stmt
@@ -114,5 +131,3 @@ namespace Quartz.AST
         public List<Token> Members;
     }
 }
-
-

@@ -12,6 +12,19 @@ namespace Quartz.Runtime.Modules
             ExportedEnv.Define("toInt", new ToIntFunction());
             ExportedEnv.Define("toDouble", new ToDoubleFunction());
             ExportedEnv.Define("toString", new ToStringFunction());
+            ExportedEnv.Define("byteToChar", new ByteToCharFunction());
+        }
+
+        private class ByteToCharFunction : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                if (arguments[0] is int i) return ((char)i).ToString();
+                if (arguments[0] is double d) return ((char)(int)d).ToString();
+                if (arguments[0] is long l) return ((char)(int)l).ToString();
+                return "";
+            }
         }
 
         private class ToIntFunction : ICallable
@@ -25,11 +38,11 @@ namespace Quartz.Runtime.Modules
                 if (arguments[0] is string s)
                 {
                     if (int.TryParse(s, out int result)) return result;
-                    throw new Exception("String could not be converted to int.");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), "String could not be converted to int.");
                 }
                 if (arguments[0] is bool b) return b ? 1 : 0;
 
-                throw new Exception($"Cannot convert {arguments[0].GetType().Name} to int.");
+                throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Cannot convert {arguments[0].GetType().Name} to int.");
             }
         }
 
@@ -44,11 +57,11 @@ namespace Quartz.Runtime.Modules
                 if (arguments[0] is string s)
                 {
                     if (double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double result)) return result;
-                    throw new Exception("String could not be converted to double.");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), "String could not be converted to double.");
                 }
                 if (arguments[0] is bool b) return b ? 1.0 : 0.0;
 
-                throw new Exception($"Cannot convert {arguments[0].GetType().Name} to double.");
+                throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Cannot convert {arguments[0].GetType().Name} to double.");
             }
         }
 

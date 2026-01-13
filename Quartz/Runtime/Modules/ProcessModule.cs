@@ -57,7 +57,7 @@ namespace Quartz.Runtime.Modules
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to get module address: {ex.Message}");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to get module address: {ex.Message}");
                 }
 
                 return new QPointer(0);
@@ -124,7 +124,7 @@ namespace Quartz.Runtime.Modules
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to get modules: {ex.Message}");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to get modules: {ex.Message}");
                 }
             }
             public override string ToString() => "<native fn Process.getModules>";

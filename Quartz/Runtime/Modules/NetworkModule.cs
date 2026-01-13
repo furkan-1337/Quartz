@@ -14,7 +14,7 @@ namespace Quartz.Runtime.Modules
         {
             ExportedEnv.Define("get", new NativeGet());
             ExportedEnv.Define("post", new NativePost());
-            ExportedEnv.Define("downloadString", new NativeGet()); 
+            ExportedEnv.Define("downloadString", new NativeGet());
             ExportedEnv.Define("downloadBytes", new NativeDownloadBytes());
             ExportedEnv.Define("downloadFile", new NativeDownloadFile());
         }
@@ -31,7 +31,7 @@ namespace Quartz.Runtime.Modules
                 }
                 catch (Exception ex)
                 {
-                    return $"Error: {ex.Message}";
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), ex.Message);
                 }
             }
             public override string ToString() => "<native fn Network.get>";
@@ -52,7 +52,7 @@ namespace Quartz.Runtime.Modules
                 }
                 catch (Exception ex)
                 {
-                    return $"Error: {ex.Message}";
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), ex.Message);
                 }
             }
             public override string ToString() => "<native fn Network.post>";
@@ -73,7 +73,7 @@ namespace Quartz.Runtime.Modules
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to download bytes: {ex.Message}");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to download bytes: {ex.Message}");
                 }
             }
             public override string ToString() => "<native fn Network.downloadBytes>";
@@ -94,11 +94,10 @@ namespace Quartz.Runtime.Modules
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to download file: {ex.Message}");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to download file: {ex.Message}");
                 }
             }
             public override string ToString() => "<native fn Network.downloadFile>";
         }
     }
 }
-

@@ -65,7 +65,7 @@ namespace Quartz.Runtime.Modules
                 int length = Convert.ToInt32(arguments[2]);
                 if (start < 0 || start >= str.Length || start + length > str.Length)
                 {
-                    throw new Exception("Index out of bounds.");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), "Index out of bounds.");
                 }
                 return str.Substring(start, length);
             }
@@ -97,7 +97,7 @@ namespace Quartz.Runtime.Modules
 
                 string[] parts = str.Split(new string[] { sep }, StringSplitOptions.None);
 
-                
+
                 List<object> list = new List<object>();
                 foreach (var part in parts)
                 {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Quartz.Interfaces;
 using Quartz.Runtime;
-using Quartz.Runtime.Native;
+using Quartz.Runtime.FFI;
 using Quartz.Runtime.Types;
 
 namespace Quartz.Runtime.Modules
@@ -25,9 +25,32 @@ namespace Quartz.Runtime.Modules
             ExportedEnv.Define("writeInt64", new NativeWriteInt64());
             ExportedEnv.Define("readDouble", new NativeReadDouble());
             ExportedEnv.Define("writeDouble", new NativeWriteDouble());
+            ExportedEnv.Define("writeFloat", new NativeWriteFloat());
+            ExportedEnv.Define("readFloat", new NativeReadFloat());
             ExportedEnv.Define("writeStruct", new NativeWriteStruct());
             ExportedEnv.Define("readStruct", new NativeReadStruct());
+            ExportedEnv.Define("readPtr", new NativeReadPtr());
+            ExportedEnv.Define("writePtr", new NativeWritePtr());
             ExportedEnv.Define("structureToPtr", new NativeStructureToPtr());
+            ExportedEnv.Define("stringToPtr", new NativeStringToPtr());
+            ExportedEnv.Define("stringToPtrUni", new NativeStringToPtrUni());
+            ExportedEnv.Define("callPtr", new NativeCallPtr());
+            ExportedEnv.Define("invoke", new NativeInvoke());
+            ExportedEnv.Define("size", new NativeSize());
+        }
+
+        private static long GetAddress(Interpreter interpreter, object arg, string functionName)
+        {
+            if (arg is QPointer ptr) return ptr.Address;
+            if (arg is IntPtr p) return (long)p;
+            try
+            {
+                return Convert.ToInt64(arg);
+            }
+            catch
+            {
+                throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token { File = "unknown", Line = 0, Column = 0 }, $"[{functionName}] Expected Pointer/Address, got {arg?.GetType().Name ?? "null"}: {arg}");
+            }
         }
 
         private class NativeAlloc : ICallable
@@ -47,14 +70,8 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 1;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    Marshal.FreeHGlobal((IntPtr)ptr.Address);
-                }
-                else
-                {
-                    throw new Exception("Expected Pointer.");
-                }
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.free");
+                Marshal.FreeHGlobal((IntPtr)addr);
                 return null;
             }
             public override string ToString() => "<native fn Marshal.free>";
@@ -65,11 +82,8 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 1;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    return Marshal.ReadInt32((IntPtr)ptr.Address);
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.readInt");
+                return Marshal.ReadInt32((IntPtr)addr);
             }
             public override string ToString() => "<native fn Marshal.readInt>";
         }
@@ -79,27 +93,25 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 2;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    int val = Convert.ToInt32(arguments[1]);
-                    Marshal.WriteInt32((IntPtr)ptr.Address, val);
-                    return null;
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.writeInt");
+                int val;
+                if (arguments[1] is IntPtr p) val = (int)p;
+                else if (arguments[1] is QPointer qp) val = (int)qp.Address;
+                else val = Convert.ToInt32(arguments[1]);
+
+                Marshal.WriteInt32((IntPtr)addr, val);
+                return null;
             }
             public override string ToString() => "<native fn Marshal.writeInt>";
         }
 
         private class NativeReadString : ICallable
         {
-            public int Arity() => 1; 
+            public int Arity() => 1;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    return Marshal.PtrToStringAnsi((IntPtr)ptr.Address);
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.readAnsiString");
+                return Marshal.PtrToStringAnsi((IntPtr)addr);
             }
             public override string ToString() => "<native fn Marshal.readString>";
         }
@@ -109,11 +121,8 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 1;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    return (int)Marshal.ReadByte((IntPtr)ptr.Address); 
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.readByte");
+                return (int)Marshal.ReadByte((IntPtr)addr);
             }
             public override string ToString() => "<native fn Marshal.readByte>";
         }
@@ -123,13 +132,10 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 2;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    int val = Convert.ToInt32(arguments[1]);
-                    Marshal.WriteByte((IntPtr)ptr.Address, (byte)val);
-                    return null;
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.writeByte");
+                int val = Convert.ToInt32(arguments[1]);
+                Marshal.WriteByte((IntPtr)addr, (byte)val);
+                return null;
             }
             public override string ToString() => "<native fn Marshal.writeByte>";
         }
@@ -139,8 +145,8 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 1;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr) return (int)Marshal.ReadInt16((IntPtr)ptr.Address);
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.readInt16");
+                return (int)Marshal.ReadInt16((IntPtr)addr);
             }
             public override string ToString() => "<native fn Marshal.readInt16>";
         }
@@ -150,13 +156,10 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 2;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    short val = Convert.ToInt16(arguments[1]);
-                    Marshal.WriteInt16((IntPtr)ptr.Address, val);
-                    return null;
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.writeInt16");
+                short val = Convert.ToInt16(arguments[1]);
+                Marshal.WriteInt16((IntPtr)addr, val);
+                return null;
             }
             public override string ToString() => "<native fn Marshal.writeInt16>";
         }
@@ -166,11 +169,8 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 1;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                
-                
-                
-                if (arguments[0] is QPointer ptr) return Marshal.ReadInt64((IntPtr)ptr.Address);
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.readInt64");
+                return Marshal.ReadInt64((IntPtr)addr);
             }
             public override string ToString() => "<native fn Marshal.readInt64>";
         }
@@ -180,13 +180,14 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 2;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    long val = Convert.ToInt64(arguments[1]);
-                    Marshal.WriteInt64((IntPtr)ptr.Address, val);
-                    return null;
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.writeInt64");
+                long val;
+                if (arguments[1] is IntPtr p) val = (long)p;
+                else if (arguments[1] is QPointer qp) val = qp.Address;
+                else val = Convert.ToInt64(arguments[1]);
+
+                Marshal.WriteInt64((IntPtr)addr, val);
+                return null;
             }
             public override string ToString() => "<native fn Marshal.writeInt64>";
         }
@@ -196,12 +197,9 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 1;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    long val = Marshal.ReadInt64((IntPtr)ptr.Address);
-                    return BitConverter.Int64BitsToDouble(val);
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.readDouble");
+                long val = Marshal.ReadInt64((IntPtr)addr);
+                return BitConverter.Int64BitsToDouble(val);
             }
             public override string ToString() => "<native fn Marshal.readDouble>";
         }
@@ -211,13 +209,10 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 2;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr)
-                {
-                    double val = Convert.ToDouble(arguments[1]);
-                    Marshal.WriteInt64((IntPtr)ptr.Address, BitConverter.DoubleToInt64Bits(val));
-                    return null;
-                }
-                throw new Exception("Expected Pointer.");
+                long addr = GetAddress(interpreter, arguments[0], "Marshal.writeDouble");
+                double val = Convert.ToDouble(arguments[1]);
+                Marshal.WriteInt64((IntPtr)addr, BitConverter.DoubleToInt64Bits(val));
+                return null;
             }
             public override string ToString() => "<native fn Marshal.writeDouble>";
         }
@@ -245,8 +240,6 @@ namespace Quartz.Runtime.Modules
                         }
                         else if (val is bool b)
                         {
-                            
-                            
                             Marshal.WriteInt32((IntPtr)currentAddr, b ? 1 : 0);
                             currentAddr += 4;
                         }
@@ -276,9 +269,11 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 2;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr && arguments[1] is QStructInstance instance)
+                long ptrAddr = GetAddress(interpreter, arguments[0], "Marshal.writeStruct");
+
+                if (arguments[1] is QStructInstance instance)
                 {
-                    IntPtr currentAddr = (IntPtr)ptr.Address;
+                    IntPtr currentAddr = (IntPtr)ptrAddr;
                     foreach (var field in instance.Template.Fields)
                     {
                         string type = field.Type.Value.ToLower();
@@ -303,7 +298,12 @@ namespace Quartz.Runtime.Modules
                                 currentAddr += IntPtr.Size;
                                 break;
                             case "long":
-                                Marshal.WriteInt64(currentAddr, Convert.ToInt64(val));
+                                long lVal;
+                                if (val is IntPtr ip) lVal = (long)ip;
+                                else if (val is QPointer qp) lVal = qp.Address;
+                                else lVal = Convert.ToInt64(val);
+
+                                Marshal.WriteInt64(currentAddr, lVal);
                                 currentAddr += 8;
                                 break;
                             case "float":
@@ -325,10 +325,12 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 2;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                if (arguments[0] is QPointer ptr && arguments[1] is QStruct template)
+                long ptrAddr = GetAddress(interpreter, arguments[0], "Marshal.readStruct");
+
+                if (arguments[1] is QStruct template)
                 {
                     QStructInstance instance = new QStructInstance(template);
-                    IntPtr currentAddr = (IntPtr)ptr.Address;
+                    IntPtr currentAddr = (IntPtr)ptrAddr;
 
                     foreach (var field in template.Fields)
                     {
@@ -371,7 +373,143 @@ namespace Quartz.Runtime.Modules
             }
             public override string ToString() => "<native fn Marshal.readStruct>";
         }
+
+        private class NativeStringToPtr : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                string s = Convert.ToString(arguments[0]);
+                IntPtr ptr = Marshal.StringToHGlobalAnsi(s);
+                return new QPointer((long)ptr);
+            }
+            public override string ToString() => "<native fn Marshal.stringToPtr>";
+        }
+
+        private class NativeStringToPtrUni : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                string s = Convert.ToString(arguments[0]);
+                IntPtr ptr = Marshal.StringToHGlobalUni(s);
+                return new QPointer((long)ptr);
+            }
+            public override string ToString() => "<native fn Marshal.stringToPtrUni>";
+        }
+
+        private class NativeCallPtr : ICallable
+        {
+            public int Arity() => -1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                if (arguments.Count < 2)
+                    throw new Exception("callPtr requires at least 2 arguments: address, returnType, [paramTypes].");
+
+                long address = GetAddress(interpreter, arguments[0], "Marshal.callPtr");
+                string returnTypeStr = (string)arguments[1];
+
+                Type returnType = ExternFunction.ParseType(returnTypeStr);
+                List<Type> paramTypes = new List<Type>();
+
+                List<object> typesList = null;
+                if (arguments.Count > 2)
+                {
+                    if (arguments[2] is List<object> l) typesList = l;
+                    else if (arguments[2] is QArray arr) typesList = arr.Elements;
+                }
+
+                if (typesList != null)
+                {
+                    foreach (var t in typesList)
+                    {
+                        paramTypes.Add(ExternFunction.ParseType(Convert.ToString(t)));
+                    }
+                }
+
+                return new NativeCallable((IntPtr)address, returnType, paramTypes);
+            }
+            public override string ToString() => "<native fn Marshal.callPtr>";
+        }
+
+        private class NativeWriteFloat : ICallable
+        {
+            public int Arity() => 2;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                long address = GetAddress(interpreter, arguments[0], "Marshal.writeFloat");
+
+                float val = Convert.ToSingle(arguments[1]);
+                byte[] bytes = BitConverter.GetBytes(val);
+                Marshal.Copy(bytes, 0, (IntPtr)address, 4);
+                return null;
+            }
+            public override string ToString() => "<native fn Marshal.writeFloat>";
+        }
+
+        private class NativeReadFloat : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                long address = GetAddress(interpreter, arguments[0], "Marshal.readFloat");
+
+                byte[] bytes = new byte[4];
+                Marshal.Copy((IntPtr)address, bytes, 0, 4);
+                return (double)BitConverter.ToSingle(bytes, 0);
+            }
+            public override string ToString() => "<native fn Marshal.readFloat>";
+        }
+
+        private class NativeInvoke : ICallable
+        {
+            public int Arity() => 2;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                List<object> argsList = null;
+                if (arguments[1] is List<object> l) argsList = l;
+                else if (arguments[1] is QArray arr) argsList = arr.Elements;
+
+                if (arguments[0] is ICallable function && argsList != null)
+                {
+                    return function.Call(interpreter, argsList);
+                }
+                throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Expected Function and List/Array of arguments. Got {arguments[0]?.GetType().Name} and {arguments[1]?.GetType().Name}");
+            }
+            public override string ToString() => "<native fn Marshal.invoke>";
+        }
+        private class NativeReadPtr : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                long address = GetAddress(interpreter, arguments[0], "Marshal.readPtr");
+                return new QPointer((long)Marshal.ReadIntPtr((IntPtr)address));
+            }
+            public override string ToString() => "<native fn Marshal.readPtr>";
+        }
+
+        private class NativeWritePtr : ICallable
+        {
+            public int Arity() => 2;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                long address = GetAddress(interpreter, arguments[0], "Marshal.writePtr");
+                long val = GetAddress(interpreter, arguments[1], "Marshal.writePtr-value");
+                Marshal.WriteIntPtr((IntPtr)address, (IntPtr)val);
+                return null;
+            }
+            public override string ToString() => "<native fn Marshal.writePtr>";
+        }
+
+        private class NativeSize : ICallable
+        {
+            public int Arity() => 0;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                return IntPtr.Size;
+            }
+            public override string ToString() => "<native fn Marshal.size>";
+        }
     }
 }
-
-

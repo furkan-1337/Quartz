@@ -13,30 +13,88 @@ using Quartz.Exceptions;
 
 namespace Quartz.Runtime
 {
-    public class ReturnException : Exception
-    {
-        public object Value { get; }
-        public ReturnException(object value) { Value = value; }
-    }
 
-    public class BreakException : Exception { }
+    internal class StackFrame
+    {
+        public string FunctionName { get; set; } = string.Empty;
+        public string File { get; set; } = string.Empty;
+        public int Line { get; set; }
+
+        public void Initialize(string functionName, string file, int line)
+        {
+            FunctionName = functionName;
+            File = file;
+            Line = line;
+        }
+    }
 
     internal class Interpreter
     {
+        private static readonly Stack<StackFrame> _framePool = new Stack<StackFrame>();
+        private static readonly object _poolLock = new object();
+        public bool DebugMode { get; set; } = true;
+
+        [ThreadStatic]
+        public static Interpreter? Current;
+
+        private List<StackFrame> callStack = new List<StackFrame>();
+        public IReadOnlyList<StackFrame> CallStack => callStack;
+
+        private StackFrame RentFrame(string functionName, string file, int line)
+        {
+            lock (_poolLock)
+            {
+                if (_framePool.Count > 0)
+                {
+                    var frame = _framePool.Pop();
+                    frame.Initialize(functionName, file, line);
+                    return frame;
+                }
+            }
+            var newFrame = new StackFrame();
+            newFrame.Initialize(functionName, file, line);
+            return newFrame;
+        }
+
+        private void ReturnFrame(StackFrame frame)
+        {
+            lock (_poolLock)
+            {
+                _framePool.Push(frame);
+            }
+        }
+
         public Environment global;
         private Environment environment;
         internal Environment CurrentEnvironment => environment;
+        public Token? CurrentToken { get; private set; }
 
         public Interpreter()
         {
+            Current = this;
             global = new Environment();
             environment = global;
 
+            InitGlobals();
+        }
+
+        public Interpreter(Environment sharedGlobal)
+        {
+            Current = this;
+            global = sharedGlobal;
+            environment = global;
+        }
+
+        private void InitGlobals()
+        {
             global.Define("extern", new ExternFunction());
             global.Define("import", new ImportFunction());
+            global.Define("load", new LoadFunction());
+            global.Define("null", (object?)null);
+
             global.Define("time", new TimeFunction());
 
-            
+
             global.Define("Console", new ConsoleModule());
             global.Define("Math", new MathModule());
             global.Define("Thread", new ThreadModule());
@@ -55,13 +113,51 @@ namespace Quartz.Runtime
             global.Define("Window", new WindowModule());
             global.Define("Callback", new CallbackModule());
 
-            
+
             global.Define("typeof", new TypeOfFunction());
             global.Define("sizeof", new SizeOfFunction());
         }
 
+        public void Resolve(List<Stmt> statements)
+        {
+            Resolver resolver = new Resolver(this);
+            resolver.Resolve(statements);
+        }
+
+
+        private object EvalWithEnv(Expr expr, Environment environment)
+        {
+            Environment previous = this.environment;
+            try
+            {
+                this.environment = environment;
+                return Evaluate(expr);
+            }
+            finally
+            {
+                this.environment = previous;
+            }
+        }
+
+        private void ExecWithEnv(Stmt stmt, Environment environment)
+        {
+            Environment previous = this.environment;
+            try
+            {
+                this.environment = environment;
+                Execute(stmt);
+            }
+            finally
+            {
+                this.environment = previous;
+            }
+        }
+
+
+
         public void Interpret(List<Stmt> statements)
         {
+            Resolve(statements);
             foreach (var statement in statements)
             {
                 Execute(statement);
@@ -73,8 +169,16 @@ namespace Quartz.Runtime
             switch (stmt)
             {
                 case VarDeclStmt varDecl:
+                    CurrentToken = new Token { Line = 0, File = "unknown" }; // TODO: Stmt should have tokens
                     object value = Evaluate(varDecl.Initializer);
-                    environment.Define(varDecl.Name, value);
+                    if (varDecl.SlotIndex.HasValue)
+                    {
+                        environment.DefineSlot(varDecl.SlotIndex.Value, value);
+                    }
+                    else
+                    {
+                        environment.Define(varDecl.Name, value);
+                    }
 
                     break;
 
@@ -83,7 +187,17 @@ namespace Quartz.Runtime
                     break;
 
                 case BlockStmt block:
-                    ExecuteBlock(block.Statements, new Environment(environment));
+                    {
+                        var blockEnv = Environment.Rent(environment);
+                        try
+                        {
+                            ExecuteBlock(block.Statements, blockEnv);
+                        }
+                        finally
+                        {
+                            Environment.Return(blockEnv);
+                        }
+                    }
                     break;
 
                 case IfStmt ifStmt:
@@ -98,9 +212,46 @@ namespace Quartz.Runtime
                     break;
 
                 case WhileStmt whileStmt:
-                    while (IsTruthy(Evaluate(whileStmt.Condition)))
+                    try
                     {
-                        Execute(whileStmt.Body);
+                        while (IsTruthy(Evaluate(whileStmt.Condition)))
+                        {
+                            try
+                            {
+                                Execute(whileStmt.Body);
+                            }
+                            catch (ContinueException) { }
+                        }
+                    }
+                    catch (BreakException) { }
+                    break;
+
+                case ForStmt forStmt:
+                    {
+                        Environment forEnv = Environment.Rent(environment);
+                        try
+                        {
+                            if (forStmt.Initializer != null) ExecWithEnv(forStmt.Initializer, forEnv);
+
+                            try
+                            {
+                                while (IsTruthy(EvalWithEnv(forStmt.Condition, forEnv)))
+                                {
+                                    try
+                                    {
+                                        ExecuteBlock(new List<Stmt> { forStmt.Body }, forEnv);
+                                    }
+                                    catch (ContinueException) { }
+
+                                    if (forStmt.Increment != null) EvalWithEnv(forStmt.Increment, forEnv);
+                                }
+                            }
+                            catch (BreakException) { }
+                        }
+                        finally
+                        {
+                            Environment.Return(forEnv);
+                        }
                     }
                     break;
 
@@ -122,53 +273,74 @@ namespace Quartz.Runtime
                         throw new Exception("Can only iterate over arrays or dictionaries.");
                     }
 
-                    foreach (var item in enumerator)
+                    try
                     {
-                        
-                        
-                        
-                        
-
-                        
-                        
-
-                        
-                        Environment loopEnv = new Environment(environment);
-                        loopEnv.Define(foreachStmt.VariableName.Value, item);
-
-                        
-                        
-                        
-
-                        
-                        
-                        
-
-                        EvaluateWithEnvironment(foreachStmt.Body, loopEnv);
+                        foreach (var item in enumerator)
+                        {
+                            Environment loopEnv = Environment.Rent(environment);
+                            try
+                            {
+                                if (foreachStmt.SlotIndex.HasValue)
+                                {
+                                    loopEnv.DefineSlot(foreachStmt.SlotIndex.Value, item);
+                                }
+                                else
+                                {
+                                    loopEnv.Define(foreachStmt.VariableName.Value, item);
+                                }
+                                try
+                                {
+                                    ExecWithEnv(foreachStmt.Body, loopEnv);
+                                }
+                                catch (ContinueException) { }
+                            }
+                            finally
+                            {
+                                Environment.Return(loopEnv);
+                            }
+                        }
                     }
+                    catch (BreakException) { }
                     break;
 
                 case TryStmt tryStmt:
+                    int stackDepth = callStack.Count;
                     try
                     {
                         Execute(tryStmt.TryBlock);
                     }
                     catch (Exception ex)
                     {
-                        
-                        Environment catchEnv = new Environment(environment);
+                        // Clean up leaked stack frames
+                        while (callStack.Count > stackDepth)
+                        {
+                            var leakedFrame = callStack[^1];
+                            callStack.RemoveAt(callStack.Count - 1);
+                            ReturnFrame(leakedFrame);
+                        }
 
-                        
-                        
-                        string errorMessage = ex.Message;
-                        if (ex is ReturnException) throw; 
+                        Environment catchEnv = Environment.Rent(environment);
+                        try
+                        {
+                            string errorMessage = ex.Message;
+                            if (ex is ReturnException || ex is BreakException || ex is ContinueException) throw;
 
-                        
-                        
-                        catchEnv.Define(tryStmt.ErrorVariable.Value, errorMessage);
-
-                        EvaluateWithEnvironment(tryStmt.CatchBlock, catchEnv);
+                            if (tryStmt.SlotIndex.HasValue)
+                            {
+                                catchEnv.DefineSlot(tryStmt.SlotIndex.Value, errorMessage);
+                            }
+                            else
+                            {
+                                catchEnv.Define(tryStmt.ErrorVariable.Value, errorMessage);
+                            }
+                            ExecWithEnv(tryStmt.CatchBlock, catchEnv);
+                        }
+                        finally
+                        {
+                            Environment.Return(catchEnv);
+                        }
                     }
+
                     break;
 
                 case SwitchStmt switchStmt:
@@ -180,29 +352,48 @@ namespace Quartz.Runtime
                         foreach (var caseStmt in switchStmt.Cases)
                         {
                             object caseValue = Evaluate(caseStmt.Value);
-                            
+
                             if (IsEqual(switchValue, caseValue))
                             {
                                 matched = true;
-                                ExecuteBlock(caseStmt.Body, new Environment(environment));
-                                
+                                var caseEnv = Environment.Rent(environment);
+                                try
+                                {
+                                    ExecuteBlock(caseStmt.Body, caseEnv);
+                                }
+                                finally
+                                {
+                                    Environment.Return(caseEnv);
+                                }
+
                                 return;
                             }
                         }
 
                         if (!matched && switchStmt.DefaultBranch != null)
                         {
-                            ExecuteBlock(switchStmt.DefaultBranch, new Environment(environment));
+                            var defaultEnv = Environment.Rent(environment);
+                            try
+                            {
+                                ExecuteBlock(switchStmt.DefaultBranch, defaultEnv);
+                            }
+                            finally
+                            {
+                                Environment.Return(defaultEnv);
+                            }
                         }
                     }
                     catch (BreakException)
                     {
-                        
+
                     }
                     break;
 
                 case BreakStmt breakStmt:
                     throw new BreakException();
+
+                case ContinueStmt continueStmt:
+                    throw new ContinueException();
 
                 case FunctionStmt function:
                     Function func = new Function(function, environment);
@@ -310,16 +501,40 @@ namespace Quartz.Runtime
         {
             switch (expr)
             {
+                case BinaryExpr binary:
+                    CurrentToken = binary.Operator;
+                    break;
+                case CallExpr call:
+                    CurrentToken = call.Paren;
+                    break;
+                case UnaryExpr unary:
+                    CurrentToken = unary.Operator;
+                    break;
+            }
+
+            switch (expr)
+            {
                 case LiteralExpr literal:
                     return literal.Value;
 
                 case VariableExpr variable:
+                    if (variable.Distance.HasValue)
+                    {
+                        return environment.GetAt(variable.Distance.Value, variable.SlotIndex.Value);
+                    }
                     return environment.Get(variable.Name);
 
                 case AssignExpr assign:
                     {
                         object val = Evaluate(assign.Value);
-                        environment.Assign(assign.Name, val);
+                        if (assign.Distance.HasValue)
+                        {
+                            environment.AssignAt(assign.Distance.Value, assign.SlotIndex.Value, val);
+                        }
+                        else
+                        {
+                            environment.Assign(assign.Name, val);
+                        }
 
                         return val;
                     }
@@ -353,33 +568,70 @@ namespace Quartz.Runtime
                             if (right is int n) return -n;
                             if (right is double d) return -d;
                             RuntimeErrorHandler.Error(unary.Operator, "Operand must be a number.");
-                            break; 
+                            break;
                         case TokenType.Bang:
                             return !IsTruthy(right);
+                        case TokenType.BitwiseNot:
+                            if (right is int i) return ~i;
+                            if (right is long l) return ~l;
+                            throw new RuntimeError(unary.Operator, "Operand must be an integer for bitwise not.");
                     }
                     throw new Exception("Unknown unary operator.");
 
                 case CallExpr call:
-                    object callee = Evaluate(call.Callee);
-
-                    List<object> arguments = new List<object>();
-                    foreach (Expr argument in call.Arguments)
                     {
-                        arguments.Add(Evaluate(argument));
-                    }
+                        object callee = Evaluate(call.Callee);
 
-                    if (!(callee is ICallable))
-                    {
-                        throw new Exception("Can only call functions and classes.");
-                    }
+                        List<object?> arguments = new List<object?>();
+                        foreach (Expr argument in call.Arguments)
+                        {
+                            arguments.Add(Evaluate(argument));
+                        }
 
-                    ICallable function = (ICallable)callee;
-                    if (function.Arity() != -1 && arguments.Count != function.Arity())
-                    {
-                        throw new Exception($"Expected {function.Arity()} arguments but got {arguments.Count}.");
-                    }
+                        if (!(callee is ICallable))
+                        {
+                            throw new RuntimeError(call.Paren, "Can only call functions and classes.");
+                        }
 
-                    return function.Call(this, arguments);
+                        ICallable function = (ICallable)callee;
+                        if (function.Arity() != -1 && arguments.Count != function.Arity())
+                        {
+                            throw new RuntimeError(call.Paren, $"Expected {function.Arity()} arguments but got {arguments.Count}.");
+                        }
+
+                        try
+                        {
+                            StackFrame? frame = null;
+                            if (DebugMode)
+                            {
+                                string funcName = "anonymous";
+                                if (call.Callee is VariableExpr v) funcName = v.Name;
+                                else if (call.Callee is GetExpr g) funcName = g.Name;
+
+                                frame = RentFrame(funcName, call.Paren.File, call.Paren.Line);
+                                callStack.Add(frame);
+                            }
+
+                            var result = function.Call(this, arguments);
+
+                            if (frame != null)
+                            {
+                                callStack.RemoveAt(callStack.Count - 1);
+                                ReturnFrame(frame);
+                            }
+                            return result;
+                        }
+                        catch (Exception ex) when (!(ex is RuntimeError || ex is ReturnException || ex is BreakException))
+                        {
+                            if (DebugMode && callStack.Count > 0 && callStack[^1].Line == call.Paren.Line)
+                            {
+                                var frame = callStack[^1];
+                                callStack.RemoveAt(callStack.Count - 1);
+                                ReturnFrame(frame);
+                            }
+                            throw new RuntimeError(call.Paren, ex.Message);
+                        }
+                    }
 
                 case GetExpr getExpr:
                     {
@@ -412,6 +664,11 @@ namespace Quartz.Runtime
                                 return value;
                             }
                             return null;
+                        }
+                        if (obj is string str)
+                        {
+                            if (getExpr.Name == "length") return str.Length;
+                            throw new RuntimeError(new Token { Value = getExpr.Name }, "Strings only have a 'length' property.");
                         }
                         throw new RuntimeError(new Token { Value = getExpr.Name }, "Only instances have properties.");
                     }
@@ -500,7 +757,7 @@ namespace Quartz.Runtime
                         if (collection is QDictionary qDict)
                         {
                             if (qDict.Elements.TryGetValue(index, out var val)) return val;
-                            return null; 
+                            return null;
                         }
                         if (collection is IDictionary<string, object> dictionary)
                         {
@@ -543,7 +800,7 @@ namespace Quartz.Runtime
                                 array.Elements[i] = value;
                                 return value;
                             }
-                            
+
                             throw new Exception("Index out of bounds.");
                         }
                         if (collection is QDictionary qDict)
@@ -570,6 +827,10 @@ namespace Quartz.Runtime
         {
             if (obj == null) return false;
             if (obj is bool b) return b;
+            if (obj is int n) return n != 0;
+            if (obj is long l) return l != 0;
+            if (obj is double d) return d != 0.0;
+            if (obj is string s) return s.Length > 0;
             return true;
         }
 
@@ -578,59 +839,96 @@ namespace Quartz.Runtime
             object left = Evaluate(binary.Left);
             object right = Evaluate(binary.Right);
 
-            
-            if ((left is int || left is double) && (right is int || right is double))
+            if (left is int li && right is int ri)
             {
-                double l = Convert.ToDouble(left);
-                double r = Convert.ToDouble(right);
-
-                
-                
-                
-                
-                
-                
-
-                
-                double result = 0;
-                bool isBoolResult = false;
-                bool boolResult = false;
-
                 switch (binary.Operator.Type)
                 {
-                    case TokenType.Plus: result = l + r; break;
-                    case TokenType.Minus: result = l - r; break;
-                    case TokenType.Star: result = l * r; break;
-                    case TokenType.Slash: result = l / r; break;
-                    case TokenType.Greater: boolResult = l > r; isBoolResult = true; break;
-                    case TokenType.GreaterEqual: boolResult = l >= r; isBoolResult = true; break;
-                    case TokenType.Less: boolResult = l < r; isBoolResult = true; break;
-                    case TokenType.LessEqual: boolResult = l <= r; isBoolResult = true; break;
-                    case TokenType.EqualEqual: boolResult = l == r; isBoolResult = true; break;
-                    case TokenType.BangEqual: boolResult = l != r; isBoolResult = true; break;
+                    case TokenType.Plus: return li + ri;
+                    case TokenType.Minus: return li - ri;
+                    case TokenType.Star: return li * ri;
+                    case TokenType.Slash: return (double)li / ri;
+                    case TokenType.Greater: return li > ri;
+                    case TokenType.GreaterEqual: return li >= ri;
+                    case TokenType.Less: return li < ri;
+                    case TokenType.LessEqual: return li <= ri;
+                    case TokenType.EqualEqual: return li == ri;
+                    case TokenType.BangEqual: return li != ri;
+                    case TokenType.BitwiseAnd: return li & ri;
+                    case TokenType.BitwiseOr: return li | ri;
+                    case TokenType.BitwiseXor: return li ^ ri;
+                    case TokenType.ShiftLeft: return li << ri;
+                    case TokenType.ShiftRight: return li >> ri;
                 }
-
-                if (isBoolResult) return boolResult;
-
-                
-                
-                
-
-                if (left is int && right is int && binary.Operator.Type != TokenType.Slash)
-                {
-                    return (int)result;
-                }
-
-                
-                
-                
-                
-                
-
-                return result;
             }
 
-            
+            if ((left is int || left is long || left is double) && (right is int || right is long || right is double))
+            {
+                if (left is double || right is double)
+                {
+                    double l = Convert.ToDouble(left);
+                    double r = Convert.ToDouble(right);
+                    switch (binary.Operator.Type)
+                    {
+                        case TokenType.Plus: return l + r;
+                        case TokenType.Minus: return l - r;
+                        case TokenType.Star: return l * r;
+                        case TokenType.Slash: return l / r;
+                        case TokenType.Greater: return l > r;
+                        case TokenType.GreaterEqual: return l >= r;
+                        case TokenType.Less: return l < r;
+                        case TokenType.LessEqual: return l <= r;
+                        case TokenType.EqualEqual: return l == r;
+                        case TokenType.BangEqual: return l != r;
+                    }
+                }
+                else if (left is long || right is long)
+                {
+                    long l = Convert.ToInt64(left);
+                    long r = Convert.ToInt64(right);
+                    switch (binary.Operator.Type)
+                    {
+                        case TokenType.Plus: return l + r;
+                        case TokenType.Minus: return l - r;
+                        case TokenType.Star: return l * r;
+                        case TokenType.Slash: return (double)l / r;
+                        case TokenType.Greater: return l > r;
+                        case TokenType.GreaterEqual: return l >= r;
+                        case TokenType.Less: return l < r;
+                        case TokenType.LessEqual: return l <= r;
+                        case TokenType.EqualEqual: return l == r;
+                        case TokenType.BangEqual: return l != r;
+                        case TokenType.BitwiseAnd: return l & r;
+                        case TokenType.BitwiseOr: return l | r;
+                        case TokenType.BitwiseXor: return l ^ r;
+                        case TokenType.ShiftLeft: return (long)(l << (int)r);
+                        case TokenType.ShiftRight: return (long)(l >> (int)r);
+                    }
+                }
+                else
+                {
+                    int l = Convert.ToInt32(left);
+                    int r = Convert.ToInt32(right);
+                    switch (binary.Operator.Type)
+                    {
+                        case TokenType.Plus: return l + r;
+                        case TokenType.Minus: return l - r;
+                        case TokenType.Star: return l * r;
+                        case TokenType.Slash: return (double)l / r;
+                        case TokenType.Greater: return l > r;
+                        case TokenType.GreaterEqual: return l >= r;
+                        case TokenType.Less: return l < r;
+                        case TokenType.LessEqual: return l <= r;
+                        case TokenType.EqualEqual: return l == r;
+                        case TokenType.BangEqual: return l != r;
+                        case TokenType.BitwiseAnd: return l & r;
+                        case TokenType.BitwiseOr: return l | r;
+                        case TokenType.BitwiseXor: return l ^ r;
+                        case TokenType.ShiftLeft: return l << (int)r;
+                        case TokenType.ShiftRight: return l >> (int)r;
+                    }
+                }
+            }
+
             if (left is QStructInstance structInstance)
             {
                 string methodName = "";
@@ -644,14 +942,12 @@ namespace Quartz.Runtime
 
                 if (!string.IsNullOrEmpty(methodName))
                 {
-                    
-                    
                     try
                     {
                         object methodObj = structInstance.Get(new Token { Value = methodName, Type = TokenType.Identifier });
                         if (methodObj is ICallable method)
                         {
-                            return method.Call(this, new List<object> { right });
+                            return method.Call(this, new List<object?> { right });
                         }
                     }
                     catch
@@ -661,9 +957,8 @@ namespace Quartz.Runtime
                 }
             }
 
-            
-            if ((left is QPointer ptr && (right is int || right is double)) ||
-                ((left is int || left is double) && right is QPointer))
+            if ((left is QPointer ptr && (right is int || right is long || right is double)) ||
+                ((left is int || left is long || left is double) && right is QPointer))
             {
                 QPointer p = left is QPointer lp ? lp : (QPointer)right;
                 int offset = Convert.ToInt32(left is QPointer ? right : left);
@@ -678,10 +973,9 @@ namespace Quartz.Runtime
                 case TokenType.BangEqual: return !IsEqual(left, right);
             }
 
-            
             if (binary.Operator.Type == TokenType.Plus && (left is string || right is string))
             {
-                return left.ToString() + right.ToString();
+                return (left?.ToString() ?? "null") + (right?.ToString() ?? "null");
             }
 
             throw new RuntimeError(binary.Operator, $"Invalid operands for operator {binary.Operator.Value}: {left} ({left?.GetType().Name}), {right} ({right?.GetType().Name})");

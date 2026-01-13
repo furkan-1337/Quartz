@@ -8,7 +8,7 @@ namespace Quartz.Runtime.FFI
 {
     internal class ExternFunction : ICallable
     {
-        public int Arity() => -1; 
+        public int Arity() => -1;
 
         public object Call(Interpreter interpreter, List<object> arguments)
         {
@@ -38,7 +38,7 @@ namespace Quartz.Runtime.FFI
             return new NativeCallable(proc, returnType, paramTypes);
         }
 
-        private Type ParseType(string typeName)
+        public static Type ParseType(string typeName)
         {
             switch (typeName)
             {
@@ -49,6 +49,7 @@ namespace Quartz.Runtime.FFI
                 case "string": return typeof(string);
                 case "bool": return typeof(bool);
                 case "void": return typeof(void);
+                case "byte": return typeof(byte);
                 case "pointer": return typeof(IntPtr);
                 case "ref int": return typeof(int).MakeByRefType();
                 case "out int": return typeof(int).MakeByRefType();

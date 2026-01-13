@@ -9,6 +9,7 @@ namespace Quartz.Parsing
     internal class Lexer
     {
         public readonly string Source;
+        public readonly string File;
         public readonly List<Token> Tokens = new();
 
         public int Start = 0;
@@ -16,9 +17,10 @@ namespace Quartz.Parsing
         public int Line = 1;
         public int Column = 1;
 
-        public Lexer(string source)
+        public Lexer(string source, string file = "unknown")
         {
             Source = source;
+            File = file;
         }
 
         public void Tokenize()
@@ -29,7 +31,7 @@ namespace Quartz.Parsing
                 ScanToken();
             }
 
-            Tokens.Add(new Token { Type = TokenType.EndOfFile, Line = Line, Column = Column });
+            Tokens.Add(new Token { Type = TokenType.EndOfFile, Line = Line, Column = Column, File = File });
         }
 
         private void ScanToken()
@@ -56,37 +58,45 @@ namespace Quartz.Parsing
                         Add(TokenType.Equal, "=");
                     break;
 
-                
-                
-                
-                
 
-                
-                
-                
 
-                
-                
-                
 
-                
+
+
+
+
+
+
+
+
+
+
+
 
                 case '!':
                     Add(Match('=') ? TokenType.BangEqual : TokenType.Bang, Match('=') ? "!=" : "!");
                     break;
                 case '&':
                     if (Match('&')) Add(TokenType.And, "&&");
-                    else throw new Exception($"Unexpected character: {c} at line {Line}");
+                    else Add(TokenType.BitwiseAnd, "&");
                     break;
                 case '|':
                     if (Match('|')) Add(TokenType.Or, "||");
-                    else throw new Exception($"Unexpected character: {c} at line {Line}");
+                    else Add(TokenType.BitwiseOr, "|");
                     break;
                 case '<':
-                    Add(Match('=') ? TokenType.LessEqual : TokenType.Less, Match('=') ? "<=" : "<");
+                    if (Match('<')) Add(TokenType.ShiftLeft, "<<");
+                    else Add(Match('=') ? TokenType.LessEqual : TokenType.Less, Match('=') ? "<=" : "<");
                     break;
                 case '>':
-                    Add(Match('=') ? TokenType.GreaterEqual : TokenType.Greater, Match('=') ? ">=" : ">");
+                    if (Match('>')) Add(TokenType.ShiftRight, ">>");
+                    else Add(Match('=') ? TokenType.GreaterEqual : TokenType.Greater, Match('=') ? ">=" : ">");
+                    break;
+                case '^':
+                    Add(TokenType.BitwiseXor, "^");
+                    break;
+                case '~':
+                    Add(TokenType.BitwiseNot, "~");
                     break;
 
                 case '+':
@@ -192,10 +202,11 @@ namespace Quartz.Parsing
         public char Peek() => Current >= Source.Length ? '\0' : Source[Current];
         public bool IsAtEnd() => Current >= Source.Length;
 
-        public void Add(TokenType type, string value)
-            => Tokens.Add(new Token { Type = type, Value = value, Line = Line, Column = Column - value.Length });
+        private void Add(TokenType type, string value)
+        {
+            Tokens.Add(new Token { Type = type, Value = value, Line = Line, Column = Column - value.Length, File = File });
+        }
 
-        
         public void Identifier()
         {
             int start = Current - 1;
@@ -212,6 +223,9 @@ namespace Quartz.Parsing
                     break;
                 case "int":
                     Add(TokenType.Int, text);
+                    break;
+                case "long":
+                    Add(TokenType.Long, text);
                     break;
                 case "double":
                     Add(TokenType.Double, text);
@@ -285,6 +299,9 @@ namespace Quartz.Parsing
                 case "break":
                     Add(TokenType.Break, text);
                     break;
+                case "continue":
+                    Add(TokenType.Continue, text);
+                    break;
                 case "base":
                     Add(TokenType.Base, text);
                     break;
@@ -309,7 +326,7 @@ namespace Quartz.Parsing
 
             if (Source[start] == '0' && (Peek() == 'x' || Peek() == 'X'))
             {
-                Advance(); 
+                Advance();
                 while (!IsAtEnd() && IsHexDigit(Peek()))
                     Advance();
             }
@@ -318,10 +335,10 @@ namespace Quartz.Parsing
                 while (!IsAtEnd() && char.IsDigit(Peek()))
                     Advance();
 
-                
+
                 if (Peek() == '.' && char.IsDigit(PeekNext()))
                 {
-                    
+
                     Advance();
 
                     while (char.IsDigit(Peek())) Advance();
@@ -345,35 +362,56 @@ namespace Quartz.Parsing
 
         public void String()
         {
-            int start = Current;
+            StringBuilder sb = new StringBuilder();
 
             while (!IsAtEnd() && Peek() != '"')
-                Advance();
+            {
+                if (Peek() == '\\')
+                {
+                    Advance();
+                    if (IsAtEnd()) break;
 
-            Advance(); // closing "
+                    char escaped = Advance();
+                    switch (escaped)
+                    {
+                        case 'n': sb.Append('\n'); break;
+                        case 'r': sb.Append('\r'); break;
+                        case 't': sb.Append('\t'); break;
+                        case '\\': sb.Append('\\'); break;
+                        case '"': sb.Append('"'); break;
+                        default: sb.Append('\\'); sb.Append(escaped); break;
+                    }
+                }
+                else
+                {
+                    if (Peek() == '\n') Line++;
+                    sb.Append(Advance());
+                }
+            }
 
-            string value = Source[start..(Current - 1)];
-            Add(TokenType.String, value);
+            if (!IsAtEnd()) Advance();
+
+            Add(TokenType.String, sb.ToString());
         }
 
         public void InterpolatedString()
         {
-            Advance(); 
+            Advance();
 
             Add(TokenType.LeftParen, "(");
-            Add(TokenType.String, ""); 
+            Add(TokenType.String, "");
 
             while (!IsAtEnd())
             {
                 if (Peek() == '"')
                 {
-                    Advance(); // consume "
+                    Advance();
                     break;
                 }
                 else if (Peek() == '{')
                 {
                     Add(TokenType.Plus, "+");
-                    Advance(); 
+                    Advance();
 
                     Add(TokenType.LeftParen, "(");
                     TokenizeInterpolatedExpression();
@@ -381,14 +419,35 @@ namespace Quartz.Parsing
                 }
                 else
                 {
-                    int startPart = Current;
-                    while (Peek() != '"' && Peek() != '{' && !IsAtEnd())
+                    StringBuilder sb = new StringBuilder();
+                    while (!IsAtEnd() && Peek() != '"' && Peek() != '{')
                     {
-                        if (Peek() == '\n') Line++;
-                        Advance();
-                    }
-                    string part = Source.Substring(startPart, Current - startPart);
+                        if (Peek() == '\\')
+                        {
+                            Advance();
+                            if (IsAtEnd()) break;
 
+                            char escaped = Advance();
+                            switch (escaped)
+                            {
+                                case 'n': sb.Append('\n'); break;
+                                case 'r': sb.Append('\r'); break;
+                                case 't': sb.Append('\t'); break;
+                                case '{': sb.Append('{'); break;
+                                case '}': sb.Append('}'); break;
+                                case '\\': sb.Append('\\'); break;
+                                case '"': sb.Append('"'); break;
+                                default: sb.Append('\\'); sb.Append(escaped); break;
+                            }
+                        }
+                        else
+                        {
+                            if (Peek() == '\n') Line++;
+                            sb.Append(Advance());
+                        }
+                    }
+
+                    string part = sb.ToString();
                     if (part.Length > 0)
                     {
                         Add(TokenType.Plus, "+");
@@ -411,7 +470,7 @@ namespace Quartz.Parsing
                     braceCount--;
                     if (braceCount == 0)
                     {
-                        Advance(); 
+                        Advance();
                         return;
                     }
                 }
@@ -433,5 +492,3 @@ namespace Quartz.Parsing
         }
     }
 }
-
-

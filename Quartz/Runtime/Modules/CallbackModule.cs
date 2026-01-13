@@ -4,17 +4,19 @@ using System.Runtime.InteropServices;
 using Quartz.Interfaces;
 using Quartz.Runtime;
 using Quartz.Runtime.Types;
+using Quartz.Exceptions;
+using Quartz.Parsing;
 
 namespace Quartz.Runtime.Native
 {
     internal class CallbackModule : Module
     {
-        
-        
+
+
         public delegate long Callback4(long a, long b, long c, long d);
         public delegate long Callback2(long a, long b);
 
-        
+
         private static readonly List<Delegate> _activeCallbacks = new();
 
         public CallbackModule() : base(new Environment())
@@ -30,18 +32,29 @@ namespace Quartz.Runtime.Native
             {
                 if (arguments[0] is ICallable quartzFunc)
                 {
-                    
+
                     Callback4 d = (a, b, c, d_val) =>
                     {
                         try
                         {
                             var args = new List<object> { (long)a, (long)b, (long)c, (long)d_val };
                             object? result = quartzFunc.Call(interpreter, args);
+
+                            if (result is IntPtr ptrResult) return (long)ptrResult;
+                            if (result is QPointer qPtrResult) return qPtrResult.Address;
+
                             return Convert.ToInt64(result ?? 1);
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine($"[QUARTZ CALLBACK ERROR] {ex.Message}");
+                            if (ex is RuntimeError re)
+                            {
+                                ErrorReporter.Error(re.Token, re.Message);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"[QUARTZ CALLBACK ERROR] {ex.Message}");
+                            }
                             return 0;
                         }
                     };
@@ -50,7 +63,7 @@ namespace Quartz.Runtime.Native
                     IntPtr ptr = Marshal.GetFunctionPointerForDelegate(d);
                     return new QPointer((long)ptr);
                 }
-                throw new Exception("Expected function as argument.");
+                throw new RuntimeError(interpreter.CurrentToken ?? new Token(), "Expected function as argument.");
             }
             public override string ToString() => "<native fn Callback.create>";
         }
@@ -67,4 +80,3 @@ namespace Quartz.Runtime.Native
         }
     }
 }
-

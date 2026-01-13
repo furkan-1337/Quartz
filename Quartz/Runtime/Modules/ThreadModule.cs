@@ -35,17 +35,26 @@ namespace Quartz.Runtime.Modules
             public object Call(Interpreter interpreter, List<object> arguments)
             {
                 if (!(arguments[0] is ICallable callable))
-                    throw new Exception("Thread.create expects a function.");
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), "Thread.create expects a function.");
 
                 var thread = new System.Threading.Thread(() =>
                 {
                     try
                     {
-                        callable.Call(interpreter, new List<object>());
+                        var newInterp = new Interpreter(interpreter.global);
+                        newInterp.DebugMode = interpreter.DebugMode;
+                        callable.Call(newInterp, new List<object>());
                     }
                     catch (Exception ex)
                     {
-                        System.Console.WriteLine($"[Thread Error] {ex.Message}");
+                        if (ex is Exceptions.RuntimeError re)
+                        {
+                            Exceptions.ErrorReporter.Error(re.Token, re.Message);
+                        }
+                        else
+                        {
+                            System.Console.WriteLine($"[Thread Error] {ex.Message}");
+                        }
                     }
                 });
                 thread.Start();

@@ -2,27 +2,34 @@ using Quartz.Parsing;
 using Quartz.AST;
 using Quartz.Runtime;
 using Quartz.Exceptions;
+using System.Linq;
 
 namespace Quartz
 {
     internal class Program
     {
-        static Interpreter interpreter = new Interpreter();
+        public static Interpreter interpreter = new Interpreter();
         static bool hadError = false;
 
         static void Main(string[] args)
         {
-            if (args.Length > 1)
+            bool debugFlag = args.Contains("-debug");
+            string scriptPath = args.FirstOrDefault(a => a != "-debug");
+
+            if (args.Length > (debugFlag ? 2 : 1))
             {
-                Console.WriteLine("Usage: quartz [script]");
+                Console.WriteLine("Usage: quartz [-debug] [script]");
                 System.Environment.Exit(64);
             }
-            else if (args.Length == 1)
+
+            if (scriptPath != null)
             {
-                RunFile(args[0]);
+                interpreter.DebugMode = debugFlag;
+                RunFile(scriptPath);
             }
             else
             {
+                interpreter.DebugMode = true; // REPL defaults to true
                 RunPrompt();
             }
         }
@@ -32,7 +39,7 @@ namespace Quartz
             try
             {
                 string source = File.ReadAllText(path);
-                Run(source);
+                Run(source, Path.GetFileName(path));
                 if (hadError) System.Environment.Exit(65);
             }
             catch (IOException e)
@@ -57,9 +64,10 @@ namespace Quartz
                 Console.Write("> ");
                 string line = Console.ReadLine();
                 if (line == null || line == "exit") break;
+
                 try
                 {
-                    Run(line);
+                    Run(line, "repl");
                 }
                 catch (ParseError error)
                 {
@@ -73,9 +81,9 @@ namespace Quartz
             }
         }
 
-        private static void Run(string source)
+        private static void Run(string source, string fileName = "unknown")
         {
-            Lexer lexer = new Lexer(source);
+            Lexer lexer = new Lexer(source, fileName);
             lexer.Tokenize();
 
             Parser parser = new Parser(lexer.Tokens);
@@ -95,6 +103,7 @@ namespace Quartz
             catch (Exception ex)
             {
                 Console.WriteLine($"[Error] Unexpected: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
                 hadError = true;
             }
         }

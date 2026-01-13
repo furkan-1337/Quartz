@@ -24,8 +24,15 @@ namespace Quartz.Runtime.Modules
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                string path = (string)arguments[0];
-                return File.ReadAllText(path);
+                try
+                {
+                    string path = (string)arguments[0];
+                    return File.ReadAllText(path);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to read file '{arguments[0]}': {ex.Message}");
+                }
             }
             public override string ToString() => "<native fn readFile>";
         }
@@ -36,10 +43,17 @@ namespace Quartz.Runtime.Modules
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                string path = (string)arguments[0];
-                string content = (string)arguments[1];
-                File.WriteAllText(path, content);
-                return true;
+                try
+                {
+                    string path = (string)arguments[0];
+                    string content = (string)arguments[1];
+                    File.WriteAllText(path, content);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to write file '{arguments[0]}': {ex.Message}");
+                }
             }
             public override string ToString() => "<native fn writeFile>";
         }
@@ -62,10 +76,17 @@ namespace Quartz.Runtime.Modules
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                string path = (string)arguments[0];
-                string content = (string)arguments[1];
-                File.AppendAllText(path, content);
-                return true;
+                try
+                {
+                    string path = (string)arguments[0];
+                    string content = (string)arguments[1];
+                    File.AppendAllText(path, content);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to append to file '{arguments[0]}': {ex.Message}");
+                }
             }
             public override string ToString() => "<native fn appendFile>";
         }
@@ -76,13 +97,20 @@ namespace Quartz.Runtime.Modules
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                string path = (string)arguments[0];
-                if (File.Exists(path))
+                try
                 {
-                    File.Delete(path);
-                    return true;
+                    string path = (string)arguments[0];
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                        return true;
+                    }
+                    return false;
                 }
-                return false;
+                catch (Exception ex)
+                {
+                    throw new Exceptions.RuntimeError(interpreter.CurrentToken ?? new Parsing.Token(), $"Failed to delete file '{arguments[0]}': {ex.Message}");
+                }
             }
             public override string ToString() => "<native fn deleteFile>";
         }

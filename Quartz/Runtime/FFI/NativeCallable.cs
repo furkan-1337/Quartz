@@ -20,12 +20,65 @@ namespace Quartz.Runtime.FFI
 
         private static ModuleBuilder? moduleBuilder;
 
+        private Func<List<object>, object> invoker;
+
         public NativeCallable(IntPtr functionPointer, Type returnType, List<Type> paramTypes)
         {
             this.functionPointer = functionPointer;
             this.returnType = returnType;
             this.delegateType = CreateDelegateType(returnType, paramTypes.ToArray());
             this.nativeDelegate = Marshal.GetDelegateForFunctionPointer(functionPointer, delegateType);
+            this.invoker = CreateInvoker(nativeDelegate, returnType, paramTypes.ToArray());
+        }
+
+        private Func<List<object>, object> CreateInvoker(Delegate del, Type retType, Type[] paramTypes)
+        {
+            var argsParam = Expression.Parameter(typeof(List<object>), "args");
+            var callArgs = new Expression[paramTypes.Length];
+
+            for (int i = 0; i < paramTypes.Length; i++)
+            {
+                var inputArg = Expression.Property(argsParam, "Item", Expression.Constant(i));
+                var targetType = paramTypes[i];
+
+                Expression convertedArg;
+
+                if (targetType == typeof(IntPtr))
+                {
+                    var argObj = inputArg;
+                    convertedArg = Expression.Call(typeof(NativeCallable), nameof(ConvertToIntPtr), null, argObj);
+                }
+                else
+                {
+                    convertedArg = Expression.Convert(
+                        Expression.Call(typeof(NativeCallable), nameof(CoerceType), null, inputArg, Expression.Constant(targetType)),
+                        targetType
+                    );
+                }
+
+                callArgs[i] = convertedArg;
+            }
+
+            var invokeCall = Expression.Invoke(Expression.Constant(del), callArgs);
+
+            Expression body;
+            if (retType == typeof(void))
+            {
+                body = Expression.Block(invokeCall, Expression.Constant(null));
+            }
+            else
+            {
+                Expression result = invokeCall;
+                if (retType == typeof(IntPtr))
+                {
+                    result = Expression.New(typeof(Quartz.Runtime.Types.QPointer).GetConstructor(new[] { typeof(long) })!,
+                        Expression.Convert(result, typeof(long)));
+                }
+
+                body = Expression.Convert(result, typeof(object));
+            }
+
+            return Expression.Lambda<Func<List<object>, object>>(body, argsParam).Compile();
         }
 
         private Type CreateDelegateType(Type returnType, Type[] paramTypes)
@@ -54,47 +107,40 @@ namespace Quartz.Runtime.FFI
             return typeBuilder.CreateType()!;
         }
 
-        public int Arity() => -1; 
+        public static object CoerceType(object value, Type targetType)
+        {
+            if (value == null) return null;
+            if (targetType.IsInstanceOfType(value)) return value;
+
+            if (targetType == typeof(int) && value is long l)
+            {
+                return unchecked((int)l);
+            }
+
+            if (targetType.IsEnum)
+            {
+                return Enum.ToObject(targetType, value);
+            }
+
+            return Convert.ChangeType(value, targetType);
+        }
+
+        public static IntPtr ConvertToIntPtr(object arg)
+        {
+            if (arg is IntPtr p) return p;
+            if (arg is Quartz.Runtime.Types.QPointer qp) return new IntPtr(qp.Address);
+            if (arg is int i) return new IntPtr(i);
+            if (arg is long l) return new IntPtr(l);
+            return IntPtr.Zero;
+        }
+
+        public int Arity() => -1;
 
         public object Call(Interpreter interpreter, List<object> arguments)
         {
-            
-            ParameterInfo[] parameters = nativeDelegate.Method.GetParameters();
-            object[] args = new object[arguments.Count];
-
-            for (int i = 0; i < arguments.Count; i++)
-            {
-                object arg = arguments[i];
-                Type targetType = parameters[i].ParameterType;
-
-                if (targetType == typeof(IntPtr) && arg is IntPtr pVal)
-                {
-                    args[i] = pVal;
-                }
-                else if (targetType == typeof(IntPtr) && arg is Quartz.Runtime.Types.QPointer qPtr)
-                {
-                    args[i] = new IntPtr(qPtr.Address);
-                }
-                else if (targetType == typeof(IntPtr) && arg is int iVal)
-                {
-                    args[i] = new IntPtr(iVal);
-                }
-                else if (targetType == typeof(IntPtr) && arg is long lVal)
-                {
-                    args[i] = new IntPtr(lVal);
-                }
-                else
-                {
-                    args[i] = arg;
-                }
-            }
-
-            
-            return nativeDelegate.DynamicInvoke(args);
+            return invoker(arguments);
         }
 
         public override string ToString() => "<native function>";
     }
 }
-
-

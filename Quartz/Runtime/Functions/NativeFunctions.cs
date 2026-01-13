@@ -15,6 +15,7 @@ namespace Quartz.Runtime.Functions
             object value = arguments[0];
             if (value == null) return "null";
             if (value is int) return "int";
+            if (value is byte) return "byte";
             if (value is double) return "double";
             if (value is bool) return "bool";
             if (value is string) return "string";
@@ -38,16 +39,17 @@ namespace Quartz.Runtime.Functions
             object value = arguments[0];
             if (value == null) return 0;
 
-            
+
             if (value is string typeName)
             {
                 int size = GetTypeSize(typeName);
                 if (size > 0) return size;
-                return typeName.Length; 
+                return typeName.Length;
             }
 
-            
+
             if (value is int) return 4;
+            if (value is byte) return 1;
             if (value is double) return 8;
             if (value is bool) return 1;
             if (value is string s) return s.Length;
@@ -95,4 +97,3 @@ namespace Quartz.Runtime.Functions
         public override string ToString() => "<native fn sizeof>";
     }
 }
-

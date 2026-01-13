@@ -13,15 +13,17 @@ namespace Quartz.Runtime.Modules
         public ConsoleModule() : base(new Environment())
         {
             this.ExportedEnv.Define("print", new PrintFunction());
-            this.ExportedEnv.Define("writeLine", new PrintFunction()); 
+            this.ExportedEnv.Define("writeLine", new PrintFunction());
             this.ExportedEnv.Define("write", new WriteFunction());
             this.ExportedEnv.Define("readLine", new ReadLineFunction());
             this.ExportedEnv.Define("clear", new ClearFunction());
+            this.ExportedEnv.Define("setTitle", new SetTitleFunction());
+
         }
 
         private class PrintFunction : ICallable
         {
-            public int Arity() => -1; 
+            public int Arity() => -1;
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
@@ -34,7 +36,7 @@ namespace Quartz.Runtime.Modules
 
         private class WriteFunction : ICallable
         {
-            public int Arity() => -1; 
+            public int Arity() => -1;
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
@@ -68,6 +70,17 @@ namespace Quartz.Runtime.Modules
             }
 
             public override string ToString() => "<native fn clear>";
+        }
+
+        private class SetTitleFunction : ICallable
+        {
+            public int Arity() => 1;
+            public object Call(Interpreter interpreter, List<object> arguments)
+            {
+                Console.Title = arguments[0]?.ToString() ?? "";
+                return null;
+            }
+            public override string ToString() => "<native fn setTitle>";
         }
     }
 }
