@@ -65,6 +65,25 @@ namespace Quartz.AST
     {
         public Token Operator;
         public Expr Right;
+        internal int? Distance;
+        internal int? SlotIndex;
+    }
+
+    class PostfixExpr : Expr
+    {
+        public Expr Left;
+        public Token Operator;
+        internal int? Distance;
+        internal int? SlotIndex;
+    }
+
+    class CompoundAssignExpr : Expr
+    {
+        public Expr Left;
+        public Token Operator;
+        public Expr Value;
+        internal int? Distance;
+        internal int? SlotIndex;
     }
 
     class ArrayExpr : Expr

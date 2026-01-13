@@ -131,6 +131,15 @@ namespace Quartz.Runtime
                 case StructStmt structStmt:
                     Declare(structStmt.Name.Value);
                     Define(structStmt.Name.Value);
+
+                    BeginScope();
+                    scopes.Peek()["this"] = 0;
+
+                    foreach (var method in structStmt.Methods)
+                    {
+                        ResolveFunction(method.Params, method.Body);
+                    }
+                    EndScope();
                     break;
             }
         }
@@ -148,6 +157,12 @@ namespace Quartz.Runtime
                     ResolveLocal(assign, assign.Name);
                     break;
 
+                case CompoundAssignExpr compound:
+                    Resolve(compound.Value);
+                    Resolve(compound.Left);
+                    if (compound.Left is VariableExpr cv) ResolveLocal(compound, cv.Name);
+                    break;
+
                 case BinaryExpr binary:
                     Resolve(binary.Left);
                     Resolve(binary.Right);
@@ -160,6 +175,15 @@ namespace Quartz.Runtime
 
                 case UnaryExpr unary:
                     Resolve(unary.Right);
+                    if (unary.Operator.Type == TokenType.PlusPlus || unary.Operator.Type == TokenType.MinusMinus)
+                    {
+                        if (unary.Right is VariableExpr uv) ResolveLocal(unary, uv.Name);
+                    }
+                    break;
+
+                case PostfixExpr postfix:
+                    Resolve(postfix.Left);
+                    if (postfix.Left is VariableExpr ve) ResolveLocal(postfix, ve.Name);
                     break;
 
                 case LogicalExpr logical:
@@ -261,6 +285,9 @@ namespace Quartz.Runtime
                 {
                     if (expr is VariableExpr v) { v.Distance = i; v.SlotIndex = index; }
                     else if (expr is AssignExpr a) { a.Distance = i; a.SlotIndex = index; }
+                    else if (expr is UnaryExpr u) { u.Distance = i; u.SlotIndex = index; }
+                    else if (expr is PostfixExpr p) { p.Distance = i; p.SlotIndex = index; }
+                    else if (expr is CompoundAssignExpr c) { c.Distance = i; c.SlotIndex = index; }
                     return;
                 }
             }

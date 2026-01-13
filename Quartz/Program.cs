@@ -91,6 +91,11 @@ namespace Quartz
 
             if (statements == null || statements.Count == 0) return;
 
+            Resolver resolver = new Resolver(interpreter);
+            resolver.Resolve(statements);
+
+            if (hadError) return;
+
             try
             {
                 interpreter.Interpret(statements);

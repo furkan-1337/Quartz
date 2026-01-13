@@ -542,6 +542,12 @@ namespace Quartz.Runtime
                 case BinaryExpr binary:
                     return EvaluateBinary(binary);
 
+                case CompoundAssignExpr compound:
+                    return EvaluateCompoundAssign(compound);
+
+                case PostfixExpr postfix:
+                    return EvaluatePostfix(postfix);
+
                 case LogicalExpr logical:
                     {
                         object left = Evaluate(logical.Left);
@@ -575,6 +581,9 @@ namespace Quartz.Runtime
                             if (right is int i) return ~i;
                             if (right is long l) return ~l;
                             throw new RuntimeError(unary.Operator, "Operand must be an integer for bitwise not.");
+                        case TokenType.PlusPlus:
+                        case TokenType.MinusMinus:
+                            return EvaluateIncrement(unary, true);
                     }
                     throw new Exception("Unknown unary operator.");
 
@@ -836,12 +845,14 @@ namespace Quartz.Runtime
 
         private object EvaluateBinary(BinaryExpr binary)
         {
-            object left = Evaluate(binary.Left);
-            object right = Evaluate(binary.Right);
+            return EvaluateBinaryValue(Evaluate(binary.Left), Evaluate(binary.Right), binary.Operator);
+        }
 
+        private object EvaluateBinaryValue(object left, object right, Token op)
+        {
             if (left is int li && right is int ri)
             {
-                switch (binary.Operator.Type)
+                switch (op.Type)
                 {
                     case TokenType.Plus: return li + ri;
                     case TokenType.Minus: return li - ri;
@@ -867,7 +878,7 @@ namespace Quartz.Runtime
                 {
                     double l = Convert.ToDouble(left);
                     double r = Convert.ToDouble(right);
-                    switch (binary.Operator.Type)
+                    switch (op.Type)
                     {
                         case TokenType.Plus: return l + r;
                         case TokenType.Minus: return l - r;
@@ -885,7 +896,7 @@ namespace Quartz.Runtime
                 {
                     long l = Convert.ToInt64(left);
                     long r = Convert.ToInt64(right);
-                    switch (binary.Operator.Type)
+                    switch (op.Type)
                     {
                         case TokenType.Plus: return l + r;
                         case TokenType.Minus: return l - r;
@@ -908,7 +919,7 @@ namespace Quartz.Runtime
                 {
                     int l = Convert.ToInt32(left);
                     int r = Convert.ToInt32(right);
-                    switch (binary.Operator.Type)
+                    switch (op.Type)
                     {
                         case TokenType.Plus: return l + r;
                         case TokenType.Minus: return l - r;
@@ -932,7 +943,7 @@ namespace Quartz.Runtime
             if (left is QStructInstance structInstance)
             {
                 string methodName = "";
-                switch (binary.Operator.Type)
+                switch (op.Type)
                 {
                     case TokenType.Plus: methodName = "add"; break;
                     case TokenType.Minus: methodName = "subtract"; break;
@@ -942,17 +953,19 @@ namespace Quartz.Runtime
 
                 if (!string.IsNullOrEmpty(methodName))
                 {
+                    object methodObj;
                     try
                     {
-                        object methodObj = structInstance.Get(new Token { Value = methodName, Type = TokenType.Identifier });
-                        if (methodObj is ICallable method)
-                        {
-                            return method.Call(this, new List<object?> { right });
-                        }
+                        methodObj = structInstance.Get(new Token { Value = methodName, Type = TokenType.Identifier });
                     }
                     catch
                     {
-                        throw new RuntimeError(binary.Operator, $"Struct '{structInstance.Template.Name}' does not implement '{methodName}' method for '{binary.Operator.Value}' operator.");
+                        throw new RuntimeError(op, $"Struct '{structInstance.Template.Name}' does not implement '{methodName}' method for '{op.Value}' operator.");
+                    }
+
+                    if (methodObj is ICallable method)
+                    {
+                        return method.Call(this, new List<object> { right });
                     }
                 }
             }
@@ -963,22 +976,203 @@ namespace Quartz.Runtime
                 QPointer p = left is QPointer lp ? lp : (QPointer)right;
                 int offset = Convert.ToInt32(left is QPointer ? right : left);
 
-                if (binary.Operator.Type == TokenType.Plus) return p + offset;
-                if (binary.Operator.Type == TokenType.Minus && left is QPointer) return p - offset;
+                if (op.Type == TokenType.Plus) return p + offset;
+                if (op.Type == TokenType.Minus && left is QPointer) return p - offset;
             }
 
-            switch (binary.Operator.Type)
+            switch (op.Type)
             {
                 case TokenType.EqualEqual: return IsEqual(left, right);
                 case TokenType.BangEqual: return !IsEqual(left, right);
             }
 
-            if (binary.Operator.Type == TokenType.Plus && (left is string || right is string))
+            if (op.Type == TokenType.Plus && (left is string || right is string))
             {
                 return (left?.ToString() ?? "null") + (right?.ToString() ?? "null");
             }
 
-            throw new RuntimeError(binary.Operator, $"Invalid operands for operator {binary.Operator.Value}: {left} ({left?.GetType().Name}), {right} ({right?.GetType().Name})");
+            throw new RuntimeError(op, $"Invalid operands for operator {op.Value}: {left} ({left?.GetType().Name}), {right} ({right?.GetType().Name})");
+        }
+
+        private object EvaluateCompoundAssign(CompoundAssignExpr expr)
+        {
+            object right = Evaluate(expr.Value);
+            object current = null;
+
+            if (expr.Left is VariableExpr varExpr)
+            {
+                current = Evaluate(varExpr);
+                object newVal = ExecuteMath(current, right, expr.Operator);
+                if (expr.Distance.HasValue)
+                    environment.AssignAt(expr.Distance.Value, expr.SlotIndex.Value, newVal);
+                else
+                    environment.Assign(varExpr.Name, newVal);
+                return newVal;
+            }
+            else if (expr.Left is GetExpr getExpr)
+            {
+                object obj = Evaluate(getExpr.Object);
+                if (obj is QInstance instance) current = instance.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                else if (obj is QStructInstance si) current = si.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                else throw new RuntimeError(expr.Operator, "Only instances and structs have fields.");
+
+                object newVal = ExecuteMath(current, right, expr.Operator);
+                if (obj is QInstance i2) i2.Set(new Token { Value = getExpr.Name }, newVal);
+                else if (obj is QStructInstance si2) si2.Set(new Token { Value = getExpr.Name }, newVal);
+                return newVal;
+            }
+            else if (expr.Left is IndexExpr indexExpr)
+            {
+                object obj = Evaluate(indexExpr.Object);
+                object index = Evaluate(indexExpr.Index);
+
+                if (obj is QArray arr)
+                {
+                    int i = (int)Convert.ChangeType(index, typeof(int));
+                    current = arr.Elements[i];
+                    object newVal = ExecuteMath(current, right, expr.Operator);
+                    arr.Elements[i] = newVal;
+                    return newVal;
+                }
+                else if (obj is QDictionary dict)
+                {
+                    current = dict.Elements[index];
+                    object newVal = ExecuteMath(current, right, expr.Operator);
+                    dict.Elements[index] = newVal;
+                    return newVal;
+                }
+                else throw new RuntimeError(expr.Operator, "Only arrays and dictionaries are indexable.");
+            }
+
+            throw new RuntimeError(expr.Operator, "Invalid compound assignment target.");
+        }
+
+        private object ExecuteMath(object left, object right, Token op)
+        {
+            TokenType mathOp = TokenType.Plus;
+            switch (op.Type)
+            {
+                case TokenType.PlusEqual: mathOp = TokenType.Plus; break;
+                case TokenType.MinusEqual: mathOp = TokenType.Minus; break;
+                case TokenType.StarEqual: mathOp = TokenType.Star; break;
+                case TokenType.SlashEqual: mathOp = TokenType.Slash; break;
+            }
+            return EvaluateBinaryValue(left, right, new Token { Type = mathOp, Value = op.Value.Substring(0, 1) });
+        }
+
+        private object EvaluatePostfix(PostfixExpr postfix)
+        {
+            if (postfix.Left is VariableExpr varExpr)
+            {
+                object current = Evaluate(varExpr);
+                object newVal = AddOne(current, postfix.Operator.Type == TokenType.PlusPlus);
+                if (postfix.Distance.HasValue)
+                    environment.AssignAt(postfix.Distance.Value, postfix.SlotIndex.Value, newVal);
+                else
+                    environment.Assign(varExpr.Name, newVal);
+                return current;
+            }
+            else if (postfix.Left is GetExpr getExpr)
+            {
+                object obj = Evaluate(getExpr.Object);
+                object current = null;
+                if (obj is QInstance instance) current = instance.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                else if (obj is QStructInstance si) current = si.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                else throw new RuntimeError(postfix.Operator, "Only instances and structs have fields.");
+
+                object newVal = AddOne(current, postfix.Operator.Type == TokenType.PlusPlus);
+                if (obj is QInstance i2) i2.Set(new Token { Value = getExpr.Name }, newVal);
+                else if (obj is QStructInstance si2) si2.Set(new Token { Value = getExpr.Name }, newVal);
+                return current;
+            }
+            else if (postfix.Left is IndexExpr indexExpr)
+            {
+                object obj = Evaluate(indexExpr.Object);
+                object index = Evaluate(indexExpr.Index);
+                object current = null;
+
+                if (obj is QArray arr)
+                {
+                    int i = (int)Convert.ChangeType(index, typeof(int));
+                    current = arr.Elements[i];
+                    object newVal = AddOne(current, postfix.Operator.Type == TokenType.PlusPlus);
+                    arr.Elements[i] = newVal;
+                }
+                else if (obj is QDictionary dict)
+                {
+                    current = dict.Elements[index];
+                    object newVal = AddOne(current, postfix.Operator.Type == TokenType.PlusPlus);
+                    dict.Elements[index] = newVal;
+                }
+                else throw new RuntimeError(postfix.Operator, "Only arrays and dictionaries are indexable.");
+
+                return current;
+            }
+
+            throw new RuntimeError(postfix.Operator, "Invalid postfix increment/decrement target.");
+        }
+
+        private object EvaluateIncrement(UnaryExpr unary, bool isPrefix)
+        {
+            Expr target = unary.Right;
+            if (target is VariableExpr varExpr)
+            {
+                object current = Evaluate(varExpr);
+                object newVal = AddOne(current, unary.Operator.Type == TokenType.PlusPlus);
+                if (unary.Distance.HasValue)
+                    environment.AssignAt(unary.Distance.Value, unary.SlotIndex.Value, newVal);
+                else
+                    environment.Assign(varExpr.Name, newVal);
+                return newVal;
+            }
+            else if (target is GetExpr getExpr)
+            {
+                object obj = Evaluate(getExpr.Object);
+                object current = null;
+                if (obj is QInstance instance) current = instance.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                else if (obj is QStructInstance si) current = si.Get(new Token { Value = getExpr.Name, Type = TokenType.Identifier });
+                else throw new RuntimeError(unary.Operator, "Only instances and structs have fields.");
+
+                object newVal = AddOne(current, unary.Operator.Type == TokenType.PlusPlus);
+                if (obj is QInstance i2) i2.Set(new Token { Value = getExpr.Name }, newVal);
+                else if (obj is QStructInstance si2) si2.Set(new Token { Value = getExpr.Name }, newVal);
+                return newVal;
+            }
+            else if (target is IndexExpr indexExpr)
+            {
+                object obj = Evaluate(indexExpr.Object);
+                object index = Evaluate(indexExpr.Index);
+                object current = null;
+
+                object newVal;
+                if (obj is QArray arr)
+                {
+                    int i = (int)Convert.ChangeType(index, typeof(int));
+                    current = arr.Elements[i];
+                    newVal = AddOne(current, unary.Operator.Type == TokenType.PlusPlus);
+                    arr.Elements[i] = newVal;
+                }
+                else if (obj is QDictionary dict)
+                {
+                    current = dict.Elements[index];
+                    newVal = AddOne(current, unary.Operator.Type == TokenType.PlusPlus);
+                    dict.Elements[index] = newVal;
+                }
+                else throw new RuntimeError(unary.Operator, "Only arrays and dictionaries are indexable.");
+
+                return newVal;
+            }
+
+            throw new RuntimeError(unary.Operator, "Invalid increment/decrement target.");
+        }
+
+        private object AddOne(object val, bool increment)
+        {
+            if (val is int i) return increment ? i + 1 : i - 1;
+            if (val is long l) return increment ? l + 1 : l - 1;
+            if (val is double d) return increment ? d + 1 : d - 1;
+            if (val is float f) return increment ? f + 1 : f - 1;
+            throw new Exception($"Cannot increment/decrement type {val?.GetType().Name}");
         }
 
         private bool IsEqual(object a, object b)

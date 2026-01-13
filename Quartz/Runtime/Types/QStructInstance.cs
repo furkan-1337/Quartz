@@ -13,7 +13,7 @@ namespace Quartz.Runtime.Types
         public QStructInstance(QStruct template)
         {
             Template = template;
-            
+
             foreach (var field in template.Fields)
             {
                 fields[field.Name.Value] = GetDefaultValue(field.Type.Type);
@@ -29,7 +29,7 @@ namespace Quartz.Runtime.Types
                 case TokenType.Bool: return false;
                 case TokenType.StringType: return "";
                 case TokenType.Pointer: return new QPointer(0);
-                default: return 0; 
+                default: return 0;
             }
         }
 
@@ -63,4 +63,3 @@ namespace Quartz.Runtime.Types
         public override string ToString() => $"<struct instance {Template.Name}>";
     }
 }
-

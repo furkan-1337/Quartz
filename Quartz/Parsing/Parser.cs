@@ -429,51 +429,35 @@ namespace Quartz.Parsing
         {
             Expr expr = LogicOr();
 
-            if (Match(TokenType.Equal))
+            if (Match(TokenType.Equal, TokenType.PlusEqual, TokenType.MinusEqual, TokenType.StarEqual, TokenType.SlashEqual))
             {
-                Token equals = Previous();
+                Token op = Previous();
                 Expr value = Assignment();
 
-                if (expr is VariableExpr v)
+                if (op.Type == TokenType.Equal)
                 {
-                    Token name = new Token { Type = TokenType.Identifier, Value = v.Name };
-                    return new AssignExpr { Name = name.Value, Value = value };
+                    if (expr is VariableExpr v)
+                    {
+                        return new AssignExpr { Name = v.Name, Value = value };
+                    }
+                    else if (expr is GetExpr get)
+                    {
+                        return new SetExpr { Object = get.Object, Name = get.Name, Value = value };
+                    }
+                    else if (expr is IndexExpr index)
+                    {
+                        return new SetIndexExpr { Object = index.Object, Bracket = index.Bracket, Index = index.Index, Value = value };
+                    }
                 }
-                else if (expr is GetExpr get)
+                else
                 {
-                    return new SetExpr { Object = get.Object, Name = get.Name, Value = value };
-                }
-                else if (expr is IndexExpr index)
-                {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    return new SetIndexExpr { Object = index.Object, Bracket = index.Bracket, Index = index.Index, Value = value };
+                    if (expr is VariableExpr || expr is GetExpr || expr is IndexExpr)
+                    {
+                        return new CompoundAssignExpr { Left = expr, Operator = op, Value = value };
+                    }
                 }
 
-                throw Error(equals, "Invalid assignment target.");
+                throw Error(op, "Invalid assignment target.");
             }
 
             return expr;
@@ -628,7 +612,7 @@ namespace Quartz.Parsing
 
         Expr Unary()
         {
-            if (Match(TokenType.Bang, TokenType.Minus, TokenType.BitwiseNot))
+            if (Match(TokenType.Bang, TokenType.Minus, TokenType.BitwiseNot, TokenType.PlusPlus, TokenType.MinusMinus))
             {
                 Token @operator = Previous();
                 Expr right = Unary();
@@ -659,6 +643,11 @@ namespace Quartz.Parsing
                     Expr index = Expression();
                     Consume(TokenType.RightBracket, "Expected ']' after index.");
                     expr = new IndexExpr { Object = expr, Bracket = bracket, Index = index };
+                }
+                else if (Match(TokenType.PlusPlus, TokenType.MinusMinus))
+                {
+                    Token op = Previous();
+                    expr = new PostfixExpr { Left = expr, Operator = op };
                 }
                 else
                 {

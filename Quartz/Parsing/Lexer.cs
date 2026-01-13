@@ -100,15 +100,20 @@ namespace Quartz.Parsing
                     break;
 
                 case '+':
-                    Add(TokenType.Plus, "+");
+                    if (Match('+')) Add(TokenType.PlusPlus, "++");
+                    else if (Match('=')) Add(TokenType.PlusEqual, "+=");
+                    else Add(TokenType.Plus, "+");
                     break;
 
                 case '-':
-                    Add(TokenType.Minus, "-");
+                    if (Match('-')) Add(TokenType.MinusMinus, "--");
+                    else if (Match('=')) Add(TokenType.MinusEqual, "-=");
+                    else Add(TokenType.Minus, "-");
                     break;
 
                 case '*':
-                    Add(TokenType.Star, "*");
+                    if (Match('=')) Add(TokenType.StarEqual, "*=");
+                    else Add(TokenType.Star, "*");
                     break;
 
                 case '/':
@@ -116,10 +121,21 @@ namespace Quartz.Parsing
                     {
                         while (Peek() != '\n' && !IsAtEnd()) Advance();
                     }
-                    else
+                    else if (Match('*'))
                     {
-                        Add(TokenType.Slash, "/");
+                        while (!IsAtEnd())
+                        {
+                            if (Peek() == '*' && PeekNext() == '/')
+                            {
+                                Advance();
+                                Advance();
+                                break;
+                            }
+                            Advance();
+                        }
                     }
+                    else if (Match('=')) Add(TokenType.SlashEqual, "/=");
+                    else Add(TokenType.Slash, "/");
                     break;
 
                 case ';':
