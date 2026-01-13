@@ -1,82 +1,93 @@
-# Quartz Programming Language
+# 💎 Quartz Programming Language
 
-**Quartz** is a powerful, interpreted programming language built on the .NET ecosystem. It combines the ease of use of dynamic scripting languages with low-level system access capabilities typically reserved for compiled languages like C or C++.
+Quartz is a powerful, dynamic, and interpreted programming language designed for flexibility, ease of use, and high-performance system interaction. Built on .NET, it combines a familiar C-like syntax with advanced features typically found in systems languages, such as a Foreign Function Interface (FFI) and direct memory manipulation.
 
-Interpreted by a C# engine, Quartz allows for seamless integration with Windows APIs and native DLLs, making it an excellent choice for system automation, game hacking, learning internals, and rapid prototyping.
+## 🚀 Key Features
 
-## ✨ Key Features
+- **Dynamic Typing**: Enjoy the speed of development with dynamic types and powerful type inference.
+- **Foreign Function Interface (FFI)**: Call native functions from DLLs (`user32.dll`, `kernel32.dll`, etc.) directly with the `extern` keyword.
+- **Low-Level Control**: Built-in memory management via the `Marshal` module, supporting pointers and raw memory access.
+- **Modern OOP**: Full support for Classes, Inheritance, and Structs with operator overloading.
+- **Rich Standard Library**: Comprehensive modules for Networking, Cryptography, File I/O, Process Management, and more.
+- **First-Class Functions**: Support for standard functions and lambda expressions.
+- **Error Handling**: Robust `try/catch` mechanism for graceful error management.
 
-- **Dynamic & Safe**: Supports both dynamic typing (`auto`) and static type declarations (`int`, `bool`, `string`).
-- **🔗 Native FFI**: Call functions from native DLLs (like `kernel32.dll`, `user32.dll`) directly using the `extern` keyword.
-- **💾 Memory Management**: Allocate, read, write, and free unmanaged memory manually using the `Marshal` module.
-- **📦 Comprehensive Standard Library**: Built-in modules for File I/O, Math, Strings, Arrays, Threading, and more.
-- **🏗 Object-Oriented**: Support for Classes, Methods, and Objects.
-- **C-Like Syntax**: Familiar syntax for developers coming from C, C++, C#, or Java background.
+## 🛠️ Quick Start
 
-## 📚 Documentation
+### Installation
 
-For a deep dive into the language syntax, modules, and advanced features like FFI and Memory manipulation, please refer to the **[Quartz Language Guide](language_guide.md)**.
-
-### Prerequisites
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download) or later.
-
-### Building parts
-1. Clone the repository.
-2. Navigate to the project directory:
+1. Clone the repository:
    ```bash
-   cd Quartz
+   git clone https://github.com/furkan-1337/Quartz.git
    ```
-3. Build the project:
+2. Build the project using the .NET SDK:
    ```bash
    dotnet build
    ```
 
-### Running Scripts
-You can run a Quartz script (`.qz`) by passing it as an argument to the interpreter:
+### Running the Interpreter
 
+Launch the Quartz REPL:
 ```bash
-# Using dotnet run
-dotnet run -- script.qz
-
-# Or using the built executable
-./bin/Debug/net9.0/Quartz.exe script.qz
+quartz.exe
 ```
 
-## 💡 Example
+Run a script:
+```bash
+quartz.exe path/to/script.qz
+```
 
-Here is a simple example showing Quartz's syntax:
+### Hello World Example
 
 ```quartz
-// Import a standard library module (if needed, though Console is global)
-auto name = "Quartz";
-auto version = 1.0;
-
-Console.print("Welcome to", name, "v" + version);
-
-// Define a function
-func factorial(n) {
-    if (n <= 1) return 1;
-    return n * factorial(n - 1);
-}
-
-Console.print("Factorial of 5 is:", factorial(5));
+auto message = "Hello, Quartz!";
+Console.print(message);
 ```
 
+## 🔍 Language Highlights
 
-## 🛠 Advanced Usage (FFI)
-
-Quartz shines when you need to interact with the OS. Here is how you can show a Message Box using the Windows API:
+### Native FFI (Windows API)
+Quartz makes it trivial to interact with the Windows API:
 
 ```quartz
-func msgBox(text) {
-    // Call MessageBoxA from user32.dll
-    extern("user32.dll", "int", "MessageBoxA", "int", "string", "string", "int")(0, text, "Quartz FFI", 0);
+func msgBox(title, text) {
+    extern("user32.dll", "int", "MessageBoxA", "int", "string", "string", "int")(0, text, title, 0);
 }
 
-msgBox("Hello from Native Windows API!");
+msgBox("Quartz", "Hello from FFI!");
 ```
 
----
-*Built with ❤️ by Furkan*
+### Structs & Operator Overloading
+Define compact data structures with custom behavior:
 
+```quartz
+struct Vector2 {
+    float x;
+    float y;
 
+    func add(other) {
+        return Vector2(this.x + other.x, this.y + other.y);
+    }
+}
+
+auto v1 = Vector2(10.0, 20.0);
+auto v2 = Vector2(5.0, 5.0);
+auto v3 = v1 + v2; // Result: {15.0, 25.0}
+```
+
+### Powerful Standard Library
+Quickly perform complex tasks like downloading files:
+
+```quartz
+auto url = "https://example.com/data.txt";
+Network.downloadFile(url, "data.txt");
+Console.print("Download complete!");
+```
+
+## 📖 Documentation
+
+For a deep dive into the language syntax and all available modules, check out the [Language Guide](language_guide.md).
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
