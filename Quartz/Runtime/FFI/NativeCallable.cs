@@ -54,11 +54,11 @@ namespace Quartz.Runtime.FFI
             return typeBuilder.CreateType()!;
         }
 
-        public int Arity() => -1; // Specific arity is enforced by delegate type, but we return -1 to skip Interpreter check or we can return param count
+        public int Arity() => -1; 
 
         public object Call(Interpreter interpreter, List<object> arguments)
         {
-            // Convert arguments to expected types
+            
             ParameterInfo[] parameters = nativeDelegate.Method.GetParameters();
             object[] args = new object[arguments.Count];
 
@@ -89,11 +89,12 @@ namespace Quartz.Runtime.FFI
                 }
             }
 
-            // Invoke
+            
             return nativeDelegate.DynamicInvoke(args);
         }
 
         public override string ToString() => "<native function>";
     }
 }
+
 

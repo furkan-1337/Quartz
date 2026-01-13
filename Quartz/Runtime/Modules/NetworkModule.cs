@@ -14,7 +14,7 @@ namespace Quartz.Runtime.Modules
         {
             ExportedEnv.Define("get", new NativeGet());
             ExportedEnv.Define("post", new NativePost());
-            ExportedEnv.Define("downloadString", new NativeGet()); // Alias for get
+            ExportedEnv.Define("downloadString", new NativeGet()); 
             ExportedEnv.Define("downloadBytes", new NativeDownloadBytes());
             ExportedEnv.Define("downloadFile", new NativeDownloadFile());
         }
@@ -101,3 +101,4 @@ namespace Quartz.Runtime.Modules
         }
     }
 }
+

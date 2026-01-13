@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Quartz.Parsing
 {
-    enum TokenType
+    public enum TokenType
     {
         LeftParen, RightParen,
         LeftBrace, RightBrace,
@@ -12,17 +12,24 @@ namespace Quartz.Parsing
         Semicolon, Slash, Star,
         Equal, EqualEqual, Bang, BangEqual,
         Greater, GreaterEqual, Less, LessEqual,
+        Arrow,
         Auto,
-        Int, Double, Bool, StringType, Pointer,
+        Int, Double, Float, Bool, StringType, Pointer,
         Boolean,
         Identifier, String, Number,
         If, Else, While, For,
         Func, Return,
-        Class, This,
+        Class, Struct, This,
+        And, Or,
+        Foreach, In,
+        Try, Catch,
+        Switch, Case, Default, Break,
+        Base,
+        Enum,
         EndOfFile
     }
 
-    internal class Token
+    public class Token
     {
         public TokenType Type { get; set; }
         public string Value { get; set; } = string.Empty;
@@ -31,3 +38,4 @@ namespace Quartz.Parsing
         public override string ToString() => string.IsNullOrEmpty(Value) ? $" {Type} " : $" {Type} : {Value} ";
     }
 }
+

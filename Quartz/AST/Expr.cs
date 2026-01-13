@@ -74,5 +74,40 @@ namespace Quartz.AST
         public Token Bracket;
         public Expr Index;
     }
+
+    class SetIndexExpr : Expr
+    {
+        public Expr Object;
+        public Token Bracket;
+        public Expr Index;
+        public Expr Value;
+    }
+
+    class LogicalExpr : Expr
+    {
+        public Expr Left;
+        public Token Operator;
+        public Expr Right;
+    }
+
+    class DictionaryExpr : Expr
+    {
+        public List<Expr> Keys;
+        public List<Expr> Values;
+    }
+
+
+    class BaseExpr : Expr
+    {
+        public Token Keyword;
+        public Token Method;
+    }
+
+    class LambdaExpr : Expr
+    {
+        public List<Token> Params;
+        public List<Stmt> Body;
+    }
 }
+
 

@@ -7,14 +7,29 @@ Welcome to the official documentation for the **Quartz** programming language. Q
 2. [Basic Syntax](#basic-syntax)
     - [Comments](#comments)
     - [Variables & Types](#variables--types)
-3. [Control Flow](#control-flow)
-    - [If/Else](#conditional-statements)
-    - [Loops (While, For)](#loops)
-4. [Functions](#functions)
-5. [Classes & Objects](#classes--objects)
-6. [Data Structures](#data-structures)
+    - [String Interpolation](#string-interpolation)
+    - [Expressions & Operators](#expressions--operators)
+3. [Data Structures](#data-structures)
     - [Arrays](#arrays)
-7. [Modules & Standard Library](#modules--standard-library)
+    - [Dictionaries](#dictionaries)
+4. [Control Flow](#control-flow)
+    - [Conditional Statements (If/Else)](#conditional-statements)
+    - [Switch/Case](#switch-case)
+    - [Loops (While, For, Foreach)](#loops)
+    - [Error Handling (Try/Catch)](#error-handling)
+5. [Functions & Lambdas](#functions--lambdas)
+    - [Function Definitions](#functions)
+    - [Lambda Functions](#lambda-functions)
+6. [Object & Type System](#object--type-system)
+    - [Classes & Inheritance](#classes--objects)
+    - [Structs & Operator Overloading](#structs)
+7. [Native & Advanced Features](#native--advanced-features)
+    - [Extern (FFI)](#extern-ffi)
+    - [Callbacks](#callbacks)
+    - [Memory Management (Marshal)](#memory-management)
+    - [Introspection (typeof, sizeof)](#introspection)
+    - [Imports](#imports)
+8. [Standard Library Modules](#standard-library-modules)
     - [Console](#console)
     - [Math](#math)
     - [String](#string)
@@ -27,18 +42,16 @@ Welcome to the official documentation for the **Quartz** programming language. Q
     - [Input](#input)
     - [Crypto](#crypto)
     - [Env](#env)
-8. [Advanced Features](#advanced-features)
-    - [Extern (FFI)](#extern-ffi)
-    - [Memory Management (Marshal)](#memory-management-marshal)
-    - [Imports](#imports)
 
 ---
 
-## Introduction
+## 1. Introduction <a name="introduction"></a>
 
 Quartz combines the simplicity of scripting languages with low-level access typically found in systems languages. It features a C-like syntax, dynamic typing, and a rich standard library.
 
-## Basic Syntax
+---
+
+## 2. Basic Syntax <a name="basic-syntax"></a>
 
 ### Comments
 Single-line comments start with `//`.
@@ -51,7 +64,7 @@ auto x = 10; // Inline comment
 ### Variables & Types
 Quartz is dynamically typed, but supports type annotations for clarity. The `auto` keyword is commonly used for type inference.
 
-**Keywords:** `auto`, `int`, `double`, `bool`, `string`, `pointer`
+**Keywords:** `auto`, `int`, `float`, `double`, `bool`, `string`, `pointer`
 
 ```quartz
 auto a = 10;            // Integer
@@ -60,15 +73,102 @@ double c = 3.14;        // Float/Double
 bool d = true;          // Boolean
 string e = "Hello";     // String
 auto f = [1, 2, 3];     // Array
+float g = 1.23f;        // Explicit Float
 ```
 
 **Note:** While you can use specific type keywords (`int`, `string`, etc.), the runtime is dynamic.
 
+### String Interpolation
+Quartz supports string interpolation using the `$"..."` syntax.
+
+```quartz
+auto name = "Quartz";
+auto version = 1.2;
+Console.print($"Welcome to {name} v{version}!");
+// Output: Welcome to Quartz v1.2!
+```
+
+Expressions inside `{}` are automatically evaluated and converted to strings.
+
+### Expressions & Operators
+Quartz supports standard arithmetic and comparison operators, as well as logical operators with short-circuiting.
+
+#### Logical Operators
+- `&&` (Logical AND): Returns true if both operands are true. Short-circuits if the first operand is false.
+- `||` (Logical OR): Returns true if at least one operand is true. Short-circuits if the first operand is true.
+
+```quartz
+if (isTrue() || willNotBeCalled()) {
+    Console.print("Short-circuiting works!");
+}
+```
+
 ---
 
-## Control Flow
+## 3. Data Structures <a name="data-structures"></a>
 
-### Conditional Statements
+### Arrays <a name="arrays"></a>
+Arrays are dynamic lists that can hold mixed types.
+
+**Creation:**
+```quartz
+auto list = [10, 20, 30, "Quartz"];
+```
+
+**Access & Indexing:**
+```quartz
+auto val = list[0]; // 10
+list[1] = 99;       // Modify
+```
+
+**Instance Methods:**
+Arrays in Quartz are `QArray` objects and support several instance methods for ease of use.
+
+```quartz
+auto list = [1, 2, 3];
+list.push(4);          // Adds 4 to the end
+auto last = list.pop(); // Removes and returns 3
+auto size = list.len(); // Returns 3
+```
+
+**Array Module:**
+The global `Array` module also provides helper functions (static-style).
+
+| Function | Description | Example |
+| :--- | :--- | :--- |
+| `Array.length(arr)` | Returns the number of elements. | `Array.length(list)` |
+| `Array.push(arr, val)` | Adds an element to the end. | `Array.push(list, 40)` |
+| `Array.pop(arr)` | Removes and returns the last element. | `auto x = Array.pop(list)` |
+| `Array.insert(arr, i, val)` | Inserts value at index `i`. | `Array.insert(list, 0, 999)` |
+| `Array.remove(arr, i)` | Removes element at index `i`. | `Array.remove(list, 0)` |
+
+### Dictionaries <a name="dictionaries"></a>
+Dictionaries are collections of key-value pairs.
+
+**Creation:**
+```quartz
+auto dict = {"name": "Quartz", "version": 1.0, "active": true};
+```
+
+**Access:**
+```quartz
+auto name = dict["name"]; // "Quartz"
+dict["version"] = 1.1;     // Modify or Add
+```
+
+**Iteration:**
+You can use `foreach` to iterate over dictionary keys.
+```quartz
+foreach (key in dict) {
+    Console.print(key, ":", dict[key]);
+}
+```
+
+---
+
+## 4. Control Flow <a name="control-flow"></a>
+
+### Conditional Statements <a name="conditional-statements"></a>
 Quartz uses standard C-style `if` and `else` blocks.
 
 ```quartz
@@ -83,7 +183,25 @@ if (score >= 90) {
 }
 ```
 
-### Loops
+### Switch/Case <a name="switch-case"></a>
+Switch statements provide a cleaner way to handle multiple conditional branches.
+
+```quartz
+auto day = "Monday";
+
+switch (day) {
+    case "Monday":
+        Console.print("Start of the week!");
+        break;
+    case "Friday":
+        Console.print("Almost weekend!");
+        break;
+    default:
+        Console.print("Mid-week blues...");
+}
+```
+
+### Loops <a name="loops"></a>
 
 #### While Loop
 ```quartz
@@ -103,9 +221,37 @@ for (auto i = 0; i < 5; i = i + 1) {
 }
 ```
 
+#### Foreach Loop
+Used to iterate over collections like arrays and dictionaries.
+
+```quartz
+auto colors = ["Red", "Green", "Blue"];
+foreach (color in colors) {
+    Console.print("Color:", color);
+}
+
+auto scores = {"Alice": 90, "Bob": 85};
+foreach (name in scores) {
+    Console.print(name, "scored", scores[name]);
+}
+```
+
+### Error Handling (Try/Catch) <a name="error-handling"></a>
+Quartz allows you to handle runtime errors gracefully using `try` and `catch` blocks.
+
+```quartz
+try {
+    auto result = 10 / 0;
+} catch (error) {
+    Console.print("Caught an error:", error);
+}
+```
+
 ---
 
-## Functions
+## 5. Functions & Lambdas <a name="functions--lambdas"></a>
+
+### Functions <a name="functions"></a>
 
 Functions are defined using the `func` keyword. They can accept arguments and return values using `return`.
 
@@ -118,15 +264,33 @@ auto result = add(10, 20);
 Console.print("Result:", result);
 ```
 
+### Lambda Functions <a name="lambda-functions"></a>
+
+Lambda functions are compact, anonymous functions that can be defined as expressions.
+
+**Syntax:** `(params) => expression` or `(params) => { body }`
+
+```quartz
+// Simple lambda
+auto add = (a, b) => a + b;
+Console.print(add(10, 20)); // Output: 30
+
+// Block lambda
+auto mul = (a, b) => {
+    return a * b;
+};
+
+// No arguments
+auto hello = () => Console.print("Hello!");
+```
+
 ---
 
-## Classes & Objects
+## 6. Object & Type System <a name="object--type-system"></a>
 
-Quartz supports Object-Oriented Programming (OOP) with classes.
+### Classes & Inheritance <a name="classes--objects"></a>
 
--   Define classes with `class`.
--   Define methods with `func` inside the class.
--   Access instance properties using `this`.
+Quartz supports Object-Oriented Programming (OOP) with classes, including inheritance and constructors.
 
 ```quartz
 class Rectangle {
@@ -141,233 +305,133 @@ class Rectangle {
     }
 }
 
-// Instantiation with arguments
 auto rect = Rectangle(10, 5);
-Console.print("Area:", rect.area()); // Output: 50
+Console.print("Area:", rect.area());
 ```
 
----
+#### Inheritance & base Keyword
 
-## Data Structures
-
-### Arrays
-Arrays are dynamic lists that can hold mixed types.
-
-**Creation:**
 ```quartz
-auto list = [10, 20, 30, "Quartz"];
+class Animal {
+    func speak() { Console.print("Animal noise"); }
+}
+
+class Dog : Animal {
+    func speak() {
+        base.speak(); // Call superclass method
+        Console.print("Woof!");
+    }
+}
 ```
 
-**Access:**
+### Structs & Operator Overloading <a name="structs"></a>
+
+Structs are fixed-layout types useful for FFI and memory-sensitive tasks. They support custom constructors (`init`) and operator overloading.
+
 ```quartz
-auto val = list[0]; // 10
-list[1] = 99;       // Modify
+struct Vector2 {
+    float x;
+    float y;
+
+    func init(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    func add(other) {
+        return Vector2(this.x + other.x, this.y + other.y);
+    }
+}
+
+auto v1 = Vector2(10, 20);
+auto v2 = Vector2(5, 5);
+auto v3 = v1 + v2; // Operator Overloading
 ```
 
-**Array Module:**
-The global `Array` module provides helper functions.
-
-| Function | Description | Example |
-| :--- | :--- | :--- |
-| `Array.length(arr)` | Returns the number of elements. | `Array.length(list)` |
-| `Array.push(arr, val)` | Adds an element to the end. | `Array.push(list, 40)` |
-| `Array.pop(arr)` | Removes and returns the last element. | `auto x = Array.pop(list)` |
-| `Array.insert(arr, i, val)` | Inserts value at index `i`. | `Array.insert(list, 0, 999)` |
-| `Array.remove(arr, i)` | Removes element at index `i`. | `Array.remove(list, 0)` |
+**Supported Types in Structs:** `int`, `long`, `float`, `double`, `bool`, `pointer`, `string`.
 
 ---
 
-## Modules & Standard Library
+## 7. Native & Advanced Features <a name="native--advanced-features"></a>
 
-Quartz comes with several built-in modules available globally.
-
-### Console
-Handles input and output.
--   `Console.print(arg1, arg2, ...)`: Prints values to standard output.
--   `Console.readLine()`: Reads a line of text from input.
--   `Console.clear()`: Clears the console.
-
-### Math
-Provides mathematical functions.
--   `Math.pi`: Constant PI (approx).
--   `Math.abs(n)`: Absolute value.
--   `Math.pow(base, exp)`: Power.
--   `Math.sqrt(n)`: Square root.
--   `Math.sin(n)`, `Math.cos(n)`, `Math.tan(n)`: Trigonometry.
--   `Math.floor(n)`, `Math.ceil(n)`, `Math.round(n)`: Rounding.
--   `Math.min(a, b)`, `Math.max(a, b)`: Comparison.
-
-### String
-String manipulation utilities.
--   `String.length(str)`: Length of string.
--   `String.upper(str)`: Convert to uppercase.
--   `String.lower(str)`: Convert to lowercase.
--   `String.substring(str, start, len)`: Extract substring.
--   `String.replace(str, old, new)`: Replace occurrences.
--   `String.contains(str, substr)`: Check existence.
--   `String.split(str, delim)`: Split into array.
--   `String.trim(str)`: Remove whitespace.
-
-### Thread
-Thread management.
-- `Thread.sleep(ms)`: Pauses execution for the specified milliseconds.
-- `Thread.create(func)`: Spawns a new thread and executes the given function.
-- `Thread.getCurrentId()`: Returns the managed ID of the current thread.
-
-### IO (File System)
-File operations.
--   `IO.readFile(path)`: Reads entire file as string.
--   `IO.writeFile(path, content)`: Writes string to file.
--   `IO.appendFile(path, content)`: Appends string to file.
--   `IO.fileExists(path)`: Checks if file exists.
--   `IO.deleteFile(path)`: Deletes file.
-
-### Random
--   `Random.range(min, max)`: Returns a random integer between min and max.
--   `Random.next()`: Returns a random double between 0.0 and 1.0.
-
-### Converter
--   `Converter.toInt(val)`: Converts string/double to integer.
--   `Converter.toString(val)`: Converts value to string.
--   `Converter.toDouble(val)`: Converts value to double.
-
-### Process
-System process management.
-- `Process.list()`: Returns an array of process names.
-- `Process.isRunning(pid)`: Returns `true` if the process is running.
-- `Process.getProcessIdByName(name)`: Returns the PID of the specified process name, or -1 if not found.
-- `Process.getModules(pid)`: Returns an array of module names for the specified process.
-- `Process.getModuleAddress(pid, moduleName)`: Returns a `pointer` to the base address of a specified module in a process.
-- `Process.terminate(pid)`: Terminates the process with the given ID.
-- `Process.getCurrentProcess()`: Returns the process ID of the current interpreter.
-- `Process.getExecutablePath(pid)`: Returns the full executable path of the process.
-- `Process.getWorkingPath(pid)`: Returns the working directory (or exe directory) of the process.
-
-### System
-System and hardware information.
-- `System.getOSVersion()`: Returns OS name and version.
-- `System.getMachineName()`: Returns the computer name.
-- `System.getUserName()`: Returns the current user name.
-- `System.getMemoryStats()`: Returns a dictionary with `totalPhys`, `availPhys`, and `memoryLoad`.
-- `System.getCPUUsage()`: Returns process-specific CPU usage percentage.
-
-### Network
-Basic HTTP capabilities.
-- `Network.get(url)`: Performs an HTTP GET request (alias for `downloadString`).
-- `Network.post(url, data)`: Performs an HTTP POST request.
-- `Network.downloadString(url)`: Downloads the content of a URL as a string.
-- `Network.downloadBytes(url)`: Downloads the content of a URL as an array of bytes.
-- `Network.downloadFile(url, path)`: Downloads a file from a URL and saves it to the specified path.
-
-### Input
-Keyboard and mouse interaction.
-- `Input.isKeyDown(vKey)`: Checks if a key is pressed (uses Win32 Virtual-Key codes).
-- `Input.getMousePos()`: Returns a dictionary `{ x, y }` with mouse coordinates.
-
-### Crypto
-Hashing and encoding utilities.
-- `Crypto.sha256(data)`: Returns SHA256 hash.
-- `Crypto.md5(data)`: Returns MD5 hash.
-- `Crypto.base64Encode(data)`: Encodes string to Base64.
-- `Crypto.base64Decode(str)`: Decodes Base64 to string.
-
-### Env
-Environment variable management.
-- `Env.get(name)`: Gets an environment variable value.
-- `Env.set(name, value)`: Sets an environment variable value.
-
----
-
-## Advanced Features
-
-### Extern (FFI)
-Quartz allows calling native functions from dynamic libraries (DLLs) using the `extern` function.
-
-**Syntax:**
+### Extern (FFI) <a name="extern-ffi"></a>
+Call native functions from DLLs.
 `extern(libraryName, returnType, functionName, argTypes...)(arguments)`
 
-**Supported Types for FFI:** "int", "bool", "string", "pointer", "double", "float".
-
-**Example: MessageBox (User32.dll)**
 ```quartz
-// int MessageBox(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType);
 func msgBox(title, text) {
     extern("user32.dll", "int", "MessageBoxA", "int", "string", "string", "int")(0, text, title, 0);
 }
-
-msgBox("Hello", "This is Quartz Native Call!");
 ```
 
-### Memory Management (Marshal)
-The `Marshal` module works with FFI to handle raw memory and pointers.
+### Callbacks <a name="callbacks"></a>
+Convert Quartz functions to native pointers for use as win32 callbacks.
+
+```quartz
+auto cbPtr = Callback.create(onWindowFound);
+extern("user32.dll", "bool", "EnumWindows", "pointer", "int")(cbPtr, 0);
+```
+
+### Memory Management (Marshal) <a name="memory-management"></a>
+Low-level memory access via the `Marshal` module.
 
 | Function | Description |
 | :--- | :--- |
-| `Marshal.alloc(size)` | Allocates `size` bytes of memory. Returns a `pointer`. |
-| `Marshal.free(ptr)` | Frees allocated memory. |
-| `Marshal.readInt(ptr)` | Reads an integer from address. |
-| `Marshal.writeInt(ptr, val)` | Writes an integer to address. |
-| `Marshal.readByte(ptr)` | Reads a byte. |
-| `Marshal.writeByte(ptr, val)` | Writes a byte to address. |
-| `Marshal.readInt16(ptr)` | Reads a 16-bit integer (short). |
-| `Marshal.writeInt16(ptr, val)` | Writes a 16-bit integer (short). |
-| `Marshal.readInt(ptr)` | Reads a 32-bit integer (int). |
-| `Marshal.writeInt(ptr, val)` | Writes a 32-bit integer (int). |
-| `Marshal.readInt64(ptr)` | Reads a 64-bit integer (long). |
-| `Marshal.writeInt64(ptr, val)` | Writes a 64-bit integer (long). |
-| `Marshal.readDouble(ptr)` | Reads a 64-bit floating point number (double). |
-| `Marshal.writeDouble(ptr, val)` | Writes a 64-bit floating point number (double). |
-| `Marshal.structureToPtr(obj, ptr)` | Marshals a struct/class to memory. |
+| `Marshal.alloc(size)` | Allocates memory. |
+| `Marshal.free(ptr)` | Frees memory. |
+| `Marshal.readInt(ptr)` | Reads 32-bit int. |
+| `Marshal.structureToPtr(obj, ptr)` | Copies struct to memory. |
 
-**Example: Reading Process Memory**
+### Introspection <a name="introspection"></a>
+Inspect values at runtime using `typeof(val)` and `sizeof(val)`.
+
 ```quartz
-// Open Process (PROCESS_ALL_ACCESS = 0x1F0FFF = 2035711)
-auto handle = extern("kernel32.dll", "pointer", "OpenProcess", "int", "bool", "int")(2035711, false, 1234);
-
-if (handle != 0) {
-    auto buffer = Marshal.alloc(4);
-
-    // Call ReadProcessMemory to read 4 bytes from address 12345678
-    // Arguments: hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead
-    auto success = extern("kernel32.dll", "bool", "ReadProcessMemory", "pointer", "pointer", "pointer", "int", "pointer")(handle, 12345678, buffer, 4, 0);
-
-    if (success) {
-        auto val = Marshal.readInt(buffer);
-        Console.print("Value read:", val);
-    } else {
-        Console.print("Failed to read memory.");
-    }
-
-    Marshal.free(buffer);
-    extern("kernel32.dll", "bool", "CloseHandle", "pointer")(handle);
-} else {
-    Console.print("Failed to open process.");
-}
+Console.print(typeof(10));    // "int"
+Console.print(sizeof("int")); // 4 (bytes)
 ```
 
-### Imports
-You can include other Quartz scripts using the `import` function. This allows you to reuse classes and functions defined in separate files.
-
-**Example:**
-
-Suppose you have a file named `math_utils.qz`:
-```quartz
-// math_utils.qz
-class Calculator {
-    func add(a, b) {
-        return a + b;
-    }
-}
-```
-
-You can import and use it in your main script:
+### Imports <a name="imports"></a>
+Reuse code from other files.
 ```quartz
 import("math_utils.qz");
-
-// Instantiate the class defined in the imported file
 auto calc = Calculator();
-
-// Call a method on the instance
-auto result = calc.add(10, 20);
-Console.print("Result from imported class:", result);
 ```
+
+---
+
+## 8. Standard Library Modules <a name="standard-library-modules"></a>
+
+Quartz includes several built-in modules available globally.
+
+### Console <a name="console"></a>
+- `Console.print(...)`, `Console.readLine()`, `Console.clear()`
+
+### Math <a name="math"></a>
+- `Math.pi`, `Math.abs`, `Math.pow`, `Math.sqrt`, `Math.sin`, `Math.cos`, `Math.floor`, `Math.min`, `Math.max`
+
+### String <a name="string"></a>
+- `String.length`, `String.upper`, `String.lower`, `String.substring`, `String.replace`, `String.split`, `String.trim`
+
+### IO (File System) <a name="io-file-system"></a>
+- `IO.readFile`, `IO.writeFile`, `IO.appendFile`, `IO.fileExists`, `IO.deleteFile`
+
+### Thread <a name="thread"></a>
+- `Thread.sleep(ms)`, `Thread.create(func)`, `Thread.getCurrentId()`
+
+### Process <a name="process"></a>
+- `Process.list()`, `Process.isRunning(pid)`, `Process.getModuleAddress(pid, name)`, `Process.terminate(pid)`
+
+### Network <a name="network"></a>
+- `Network.get(url)`, `Network.post(url, data)`, `Network.downloadFile(url, path)`
+
+### System <a name="system"></a>
+- `System.getOSVersion()`, `System.getMemoryStats()`, `System.getCPUUsage()`
+
+### Input <a name="input"></a>
+- `Input.isKeyDown(vKey)`, `Input.getMousePos()`
+
+### Crypto <a name="crypto"></a>
+- `Crypto.sha256(data)`, `Crypto.md5(data)`, `Crypto.base64Encode`, `Crypto.base64Decode`
+
+### Env <a name="env"></a>
+- `Env.get(name)`, `Env.set(name, value)`

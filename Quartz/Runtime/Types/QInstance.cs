@@ -10,6 +10,7 @@ namespace Quartz.Runtime.Types
     internal class QInstance
     {
         private QClass klass;
+        public QClass Class => klass;
         private readonly Dictionary<string, object> fields = new Dictionary<string, object>();
         internal IReadOnlyDictionary<string, object> Fields => fields;
 
@@ -18,7 +19,7 @@ namespace Quartz.Runtime.Types
             this.klass = klass;
         }
 
-        public object Get(Token name)
+        public virtual object Get(Token name)
         {
             if (fields.ContainsKey(name.Value))
             {
@@ -31,7 +32,7 @@ namespace Quartz.Runtime.Types
             throw new Exception($"Undefined property '{name.Value}'.");
         }
 
-        public void Set(Token name, object value)
+        public virtual void Set(Token name, object value)
         {
             fields[name.Value] = value;
         }
@@ -42,4 +43,5 @@ namespace Quartz.Runtime.Types
         }
     }
 }
+
 

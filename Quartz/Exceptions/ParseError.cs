@@ -3,15 +3,14 @@ using Quartz.Parsing;
 
 namespace Quartz.Exceptions
 {
-    internal class RuntimeError : Exception
+    internal class ParseError : Exception
     {
         public Token Token { get; }
 
-        public RuntimeError(Token token, string message) : base(message)
+        public ParseError(Token token, string message) : base(message)
         {
             Token = token;
         }
     }
 }
-
 

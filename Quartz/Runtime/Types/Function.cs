@@ -8,28 +8,44 @@ namespace Quartz.Runtime.Types
 {
     internal class Function : ICallable
     {
-        private readonly FunctionStmt declaration;
+        private readonly string name;
+        private readonly List<Quartz.Parsing.Token> parameters;
+        private readonly List<Stmt> body;
         private readonly Environment closure;
+        private readonly FunctionStmt declaration; 
+        
 
         public Function(FunctionStmt declaration, Environment closure)
         {
-            this.declaration = declaration;
+            this.name = declaration.Name.Value;
+            this.parameters = declaration.Params;
+            this.body = declaration.Body;
             this.closure = closure;
+            this.declaration = declaration;
         }
 
-        public int Arity() => declaration.Params.Count;
+        public Function(string name, List<Quartz.Parsing.Token> parameters, List<Stmt> body, Environment closure)
+        {
+            this.name = name;
+            this.parameters = parameters;
+            this.body = body;
+            this.closure = closure;
+            this.declaration = null;
+        }
+
+        public int Arity() => parameters.Count;
 
         public object Call(Interpreter interpreter, List<object> arguments)
         {
             Environment environment = new Environment(closure);
-            for (int i = 0; i < declaration.Params.Count; i++)
+            for (int i = 0; i < parameters.Count; i++)
             {
-                environment.Define(declaration.Params[i].Value, arguments[i]);
+                environment.Define(parameters[i].Value, arguments[i]);
             }
 
             try
             {
-                interpreter.ExecuteBlock(declaration.Body, environment);
+                interpreter.ExecuteBlock(this.body, environment);
             }
             catch (ReturnException returnValue)
             {
@@ -39,14 +55,22 @@ namespace Quartz.Runtime.Types
             return null;
         }
 
-        public override string ToString() => $"<fn {declaration.Name.Value}>";
+        public override string ToString() => $"<fn {name}>";
 
         public Function Bind(QInstance instance)
         {
             Environment environment = new Environment(closure);
             environment.Define("this", instance);
-            return new Function(declaration, environment);
+            return new Function(name, parameters, body, environment);
+        }
+
+        public Function Bind(QStructInstance instance)
+        {
+            Environment environment = new Environment(closure);
+            environment.Define("this", instance);
+            return new Function(name, parameters, body, environment);
         }
     }
 }
+
 

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Quartz.AST;
+using Quartz.Exceptions;
 
 namespace Quartz.Parsing
 {
@@ -30,7 +31,7 @@ namespace Quartz.Parsing
 
         private Stmt ParseStatement()
         {
-            if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Double) || Check(TokenType.Bool) || Check(TokenType.StringType) || Check(TokenType.Pointer))
+            if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Double) || Check(TokenType.Float) || Check(TokenType.Bool) || Check(TokenType.StringType) || Check(TokenType.Pointer))
                 return VarDeclaration();
 
             if (Match(TokenType.LeftBrace))
@@ -45,14 +46,32 @@ namespace Quartz.Parsing
             if (Match(TokenType.For))
                 return ForStatement();
 
+            if (Match(TokenType.Foreach))
+                return ForeachStatement();
+
             if (Match(TokenType.Func))
                 return Function("function");
 
             if (Match(TokenType.Class))
                 return ClassDeclaration();
 
+            if (Match(TokenType.Struct))
+                return StructDeclaration();
+
+            if (Match(TokenType.Enum))
+                return EnumDeclaration();
+
             if (Match(TokenType.Return))
                 return ReturnStatement();
+
+            if (Match(TokenType.Try))
+                return TryStatement();
+
+            if (Match(TokenType.Switch))
+                return SwitchStatement();
+
+            if (Match(TokenType.Break))
+                return BreakStatement();
 
             return ExpressionStatement();
         }
@@ -68,7 +87,7 @@ namespace Quartz.Parsing
                 {
                     if (parameters.Count >= 255)
                     {
-                        // Error but don't throw
+                        
                         Console.WriteLine("Can't have more than 255 parameters.");
                     }
 
@@ -131,7 +150,7 @@ namespace Quartz.Parsing
             {
                 initializer = null;
             }
-            else if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Double) || Check(TokenType.Bool) || Check(TokenType.StringType))
+            else if (Check(TokenType.Auto) || Check(TokenType.Int) || Check(TokenType.Double) || Check(TokenType.Float) || Check(TokenType.Bool) || Check(TokenType.StringType))
             {
                 initializer = VarDeclaration();
             }
@@ -180,7 +199,104 @@ namespace Quartz.Parsing
                 body = new BlockStmt { Statements = new List<Stmt> { initializer, body } };
             }
 
+            if (initializer != null)
+            {
+                body = new BlockStmt { Statements = new List<Stmt> { initializer, body } };
+            }
+
             return body;
+        }
+
+        private Stmt ForeachStatement()
+        {
+            Consume(TokenType.LeftParen, "Expected '(' after 'foreach'.");
+
+            
+            
+            if (Match(TokenType.Auto)) {  }
+
+            Token variable = Consume(TokenType.Identifier, "Expected variable name after 'foreach ('.");
+            Consume(TokenType.In, "Expected 'in' after variable name.");
+
+            Expr collection = Expression();
+            Consume(TokenType.RightParen, "Expected ')' after foreach clauses.");
+
+            Stmt body = ParseStatement();
+
+            return new ForeachStmt { VariableName = variable, Collection = collection, Body = body };
+        }
+
+        private Stmt TryStatement()
+        {
+            Consume(TokenType.LeftBrace, "Expected '{' before try block.");
+            List<Stmt> tryBody = Block();
+            Stmt tryBlock = new BlockStmt { Statements = tryBody };
+
+            Consume(TokenType.Catch, "Expected 'catch' after try block.");
+            Consume(TokenType.LeftParen, "Expected '(' after 'catch'.");
+            Token errorVariable = Consume(TokenType.Identifier, "Expected error variable name.");
+            Consume(TokenType.RightParen, "Expected ')' after error variable.");
+
+            Consume(TokenType.LeftBrace, "Expected '{' before catch block.");
+            List<Stmt> catchBody = Block();
+            Stmt catchBlock = new BlockStmt { Statements = catchBody };
+
+            return new TryStmt { TryBlock = tryBlock, CatchBlock = catchBlock, ErrorVariable = errorVariable };
+        }
+
+        private Stmt SwitchStatement()
+        {
+            Consume(TokenType.LeftParen, "Expected '(' after 'switch'.");
+            Expr expression = Expression();
+            Consume(TokenType.RightParen, "Expected ')' after switch expression.");
+            Consume(TokenType.LeftBrace, "Expected '{' before switch body.");
+
+            List<SwitchCase> cases = new();
+            List<Stmt> defaultBranch = null;
+
+            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            {
+                if (Match(TokenType.Case))
+                {
+                    Expr value = Expression();
+                    Consume(TokenType.Colon, "Expected ':' after case value.");
+
+                    List<Stmt> statements = new();
+                    
+                    while (!Check(TokenType.Case) && !Check(TokenType.Default) && !Check(TokenType.RightBrace) && !IsAtEnd())
+                    {
+                        statements.Add(ParseStatement());
+                    }
+                    cases.Add(new SwitchCase { Value = value, Body = statements });
+                }
+                else if (Match(TokenType.Default))
+                {
+                    if (defaultBranch != null)
+                        throw Error(Previous(), "A switch statement can only have one default case.");
+
+                    Consume(TokenType.Colon, "Expected ':' after 'default'.");
+                    List<Stmt> statements = new();
+                    while (!Check(TokenType.Case) && !Check(TokenType.Default) && !Check(TokenType.RightBrace) && !IsAtEnd())
+                    {
+                        statements.Add(ParseStatement());
+                    }
+                    defaultBranch = statements;
+                }
+                else
+                {
+                    throw Error(Peek(), "Expected 'case' or 'default' inside switch.");
+                }
+            }
+
+            Consume(TokenType.RightBrace, "Expected '}' after switch body.");
+            return new SwitchStmt { Expression = expression, Cases = cases, DefaultBranch = defaultBranch };
+        }
+
+        private Stmt BreakStatement()
+        {
+            Token keyword = Previous();
+            Consume(TokenType.Semicolon, "Expected ';' after 'break'.");
+            return new BreakStmt { Keyword = keyword };
         }
 
         private List<Stmt> Block()
@@ -206,11 +322,11 @@ namespace Quartz.Parsing
 
         Stmt VarDeclaration()
         {
-            // Try to consume type (auto, int, double, etc.)
-            // Note: We don't enforce validation yet, just parsing.
-            if (Match(TokenType.Auto, TokenType.Int, TokenType.Double, TokenType.Bool, TokenType.StringType, TokenType.Pointer))
+            
+            
+            if (Match(TokenType.Auto, TokenType.Int, TokenType.Double, TokenType.Float, TokenType.Bool, TokenType.StringType, TokenType.Pointer))
             {
-                // Type consumed
+                
             }
 
             Token name = Consume(TokenType.Identifier, "Expected variable name");
@@ -233,34 +349,85 @@ namespace Quartz.Parsing
         private Stmt ClassDeclaration()
         {
             Token name = Consume(TokenType.Identifier, "Expected class name.");
+
+            Expr superclass = null;
+            if (Match(TokenType.Colon))
+            {
+                Consume(TokenType.Identifier, "Expected superclass name.");
+                superclass = new VariableExpr { Name = Previous().Value };
+            }
+
             Consume(TokenType.LeftBrace, "Expected '{' before class body.");
 
             List<FunctionStmt> methods = new();
             while (!Check(TokenType.RightBrace) && !IsAtEnd())
             {
-                // Methods within a class don't use the 'func' keyword in this design (like C# or Java)
-                // BUT user example showed usage like C++/C style function?
-                // Wait, user just said "func ReadInt(...)". So it probably looks like normal func decls usage.
-
-                // Let's assume standard Quartz func declaration inside class:
-                // class Memory { func ReadInt(...) { ... } }
-
+                
                 if (Match(TokenType.Func))
                 {
-                    // Cast Stmt to FunctionStmt
                     var funcStmt = (FunctionStmt)Function("method");
                     methods.Add(funcStmt);
                 }
                 else
                 {
-                    // Maybe allow fields later, or error for now needed
                     throw new Exception("Only methods are allowed in class body for now.");
                 }
             }
 
             Consume(TokenType.RightBrace, "Expected '}' after class body.");
 
-            return new ClassStmt { Name = name, Methods = methods };
+            return new ClassStmt { Name = name, Superclass = superclass, Methods = methods };
+        }
+
+        private Stmt StructDeclaration()
+        {
+            Token name = Consume(TokenType.Identifier, "Expected struct name.");
+            Consume(TokenType.LeftBrace, "Expected '{' before struct body.");
+
+            List<StructField> fields = new();
+            List<FunctionStmt> methods = new();
+
+            while (!Check(TokenType.RightBrace) && !IsAtEnd())
+            {
+                if (Match(TokenType.Func))
+                {
+                    var method = (FunctionStmt)Function("method");
+                    methods.Add(method);
+                }
+                else
+                {
+                    if (!Match(TokenType.Int, TokenType.Double, TokenType.Float, TokenType.Bool, TokenType.StringType, TokenType.Pointer, TokenType.Auto))
+                        throw new Exception($"Expected type in struct field at line {Peek().Line}");
+
+                    Token type = Previous();
+                    Token fieldName = Consume(TokenType.Identifier, "Expected field name.");
+                    Consume(TokenType.Semicolon, "Expected ';' after field declaration.");
+                    fields.Add(new StructField { Type = type, Name = fieldName });
+                }
+            }
+
+            Consume(TokenType.RightBrace, "Expected '}' after struct body.");
+
+            return new StructStmt { Name = name, Fields = fields, Methods = methods };
+        }
+
+        private Stmt EnumDeclaration()
+        {
+            Token name = Consume(TokenType.Identifier, "Expected enum name.");
+            Consume(TokenType.LeftBrace, "Expected '{' before enum body.");
+
+            List<Token> members = new List<Token>();
+            if (!Check(TokenType.RightBrace))
+            {
+                do
+                {
+                    members.Add(Consume(TokenType.Identifier, "Expected enum member name."));
+                } while (Match(TokenType.Comma));
+            }
+
+            Consume(TokenType.RightBrace, "Expected '}' after enum body.");
+
+            return new EnumStmt { Name = name, Members = members };
         }
 
         Expr Expression()
@@ -270,7 +437,7 @@ namespace Quartz.Parsing
 
         Expr Assignment()
         {
-            Expr expr = Equality();
+            Expr expr = LogicOr();
 
             if (Match(TokenType.Equal))
             {
@@ -286,14 +453,71 @@ namespace Quartz.Parsing
                 {
                     return new SetExpr { Object = get.Object, Name = get.Name, Value = value };
                 }
+                else if (expr is IndexExpr index)
+                {
+                    
+                    
+                    
+                    
+                    
 
-                throw new Exception("Invalid assignment target.");
+                    
+                    
+                    
+
+                    
+                    
+                    
+
+                    
+                    
+                    
+
+                    
+                    
+                    
+
+                    
+                    
+                    
+                    return new SetIndexExpr { Object = index.Object, Bracket = index.Bracket, Index = index.Index, Value = value };
+                }
+
+                throw Error(equals, "Invalid assignment target.");
             }
 
             return expr;
         }
 
-        // Comparisions
+        Expr LogicOr()
+        {
+            Expr expr = LogicAnd();
+
+            while (Match(TokenType.Or))
+            {
+                Token op = Previous();
+                Expr right = LogicAnd();
+                expr = new LogicalExpr { Left = expr, Operator = op, Right = right };
+            }
+
+            return expr;
+        }
+
+        Expr LogicAnd()
+        {
+            Expr expr = Equality();
+
+            while (Match(TokenType.And))
+            {
+                Token op = Previous();
+                Expr right = Equality();
+                expr = new LogicalExpr { Left = expr, Operator = op, Right = right };
+            }
+
+            return expr;
+        }
+
+        
         Expr Equality()
         {
             Expr expr = Comparison();
@@ -322,7 +546,7 @@ namespace Quartz.Parsing
             return expr;
         }
 
-        // + -
+        
         Expr Term()
         {
             Expr expr = Factor();
@@ -343,7 +567,7 @@ namespace Quartz.Parsing
             return expr;
         }
 
-        // * /
+        
         Expr Factor()
         {
             Expr expr = Unary();
@@ -416,7 +640,7 @@ namespace Quartz.Parsing
                 {
                     if (arguments.Count >= 255)
                     {
-                        // Limit args
+                        
                     }
                     arguments.Add(Expression());
                 } while (Match(TokenType.Comma));
@@ -427,7 +651,7 @@ namespace Quartz.Parsing
             return new CallExpr { Callee = callee, Paren = paren, Arguments = arguments };
         }
 
-        // literals, identifiers, ()
+        
         Expr Primary()
         {
             if (Match(TokenType.Number))
@@ -454,15 +678,91 @@ namespace Quartz.Parsing
             if (Match(TokenType.This))
                 return new ThisExpr { Keyword = Previous() };
 
+            if (Match(TokenType.Base))
+            {
+                Token keyword = Previous();
+                Consume(TokenType.Dot, "Expected '.' after 'base'.");
+                Token method = Consume(TokenType.Identifier, "Expected superclass method name.");
+                return new BaseExpr { Keyword = keyword, Method = method };
+            }
+
             if (Match(TokenType.LeftBracket))
                 return Array();
 
             if (Match(TokenType.LeftParen))
             {
+                
+                
+                
+                
+
+                int savedCurrent = current;
+                bool isLambda = false;
+
+                
+                if (Check(TokenType.RightParen))
+                {
+                    
+                    if (current + 1 < tokens.Count && tokens[current + 1].Type == TokenType.Arrow)
+                        isLambda = true;
+                }
+                else
+                {
+                    
+                    
+                    int temp = current;
+                    while (temp < tokens.Count && tokens[temp].Type == TokenType.Identifier)
+                    {
+                        temp++;
+                        if (temp < tokens.Count && tokens[temp].Type == TokenType.Comma)
+                        {
+                            temp++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    if (temp < tokens.Count && tokens[temp].Type == TokenType.RightParen)
+                    {
+                        if (temp + 1 < tokens.Count && tokens[temp + 1].Type == TokenType.Arrow)
+                            isLambda = true;
+                    }
+                }
+
+                if (isLambda)
+                {
+                    List<Token> parameters = new List<Token>();
+                    if (!Check(TokenType.RightParen))
+                    {
+                        do
+                        {
+                            parameters.Add(Consume(TokenType.Identifier, "Expected parameter name."));
+                        } while (Match(TokenType.Comma));
+                    }
+                    Consume(TokenType.RightParen, "Expected ')' after parameters.");
+                    Consume(TokenType.Arrow, "Expected '=>' after lambda parameters.");
+
+                    List<Stmt> body = new List<Stmt>();
+                    if (Match(TokenType.LeftBrace))
+                    {
+                        body = Block();
+                    }
+                    else
+                    {
+                        Expr lambdaExprBody = Expression();
+                        body.Add(new ReturnStmt { Keyword = new Token { Type = TokenType.Return, Line = Peek().Line }, Value = lambdaExprBody });
+                    }
+                    return new LambdaExpr { Params = parameters, Body = body };
+                }
+
                 Expr expr = Expression();
                 Consume(TokenType.RightParen, "Expected ')'");
                 return expr;
             }
+
+            if (Match(TokenType.LeftBrace))
+                return Dictionary();
 
             throw new Exception($"Expected expression. Got: {Peek().Type} ('{Peek().Value}') at line {Peek().Line}");
         }
@@ -493,10 +793,15 @@ namespace Quartz.Parsing
             return false;
         }
 
-        Token Consume(TokenType type, string error)
+        Token Consume(TokenType type, string message)
         {
             if (Check(type)) return Advance();
-            throw new Exception(error);
+            throw Error(Peek(), message);
+        }
+
+        private ParseError Error(Token token, string message)
+        {
+            return new ParseError(token, message);
         }
         Expr Array()
         {
@@ -513,6 +818,28 @@ namespace Quartz.Parsing
             return new ArrayExpr { Values = elements };
         }
 
+        Expr Dictionary()
+        {
+            List<Expr> keys = new();
+            List<Expr> values = new();
+
+            if (!Check(TokenType.RightBrace))
+            {
+                do
+                {
+                    keys.Add(Expression());
+                    Consume(TokenType.Colon, "Expected ':' after dictionary key.");
+                    values.Add(Expression());
+                } while (Match(TokenType.Comma));
+            }
+
+            Consume(TokenType.RightBrace, "Expected '}' after dictionary.");
+            return new DictionaryExpr { Keys = keys, Values = values };
+        }
+
+
+
     }
 }
+
 

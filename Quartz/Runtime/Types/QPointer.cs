@@ -30,9 +30,10 @@ namespace Quartz.Runtime.Types
             return Address.GetHashCode();
         }
 
-        // Operator overloads for convenient C# usage
+        
         public static QPointer operator +(QPointer ptr, int offset) => new QPointer(ptr.Address + offset);
         public static QPointer operator -(QPointer ptr, int offset) => new QPointer(ptr.Address - offset);
     }
 }
+
 

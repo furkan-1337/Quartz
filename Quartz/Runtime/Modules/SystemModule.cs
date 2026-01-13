@@ -84,7 +84,7 @@ namespace Quartz.Runtime.Modules
             public int Arity() => 0;
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                // Simple process-specific CPU usage calculation
+                
                 if (lastTime == DateTime.MinValue)
                 {
                     lastTime = DateTime.UtcNow;
@@ -107,3 +107,4 @@ namespace Quartz.Runtime.Modules
         }
     }
 }
+

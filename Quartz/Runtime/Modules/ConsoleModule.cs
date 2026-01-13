@@ -13,7 +13,7 @@ namespace Quartz.Runtime.Modules
         public ConsoleModule() : base(new Environment())
         {
             this.ExportedEnv.Define("print", new PrintFunction());
-            this.ExportedEnv.Define("writeLine", new PrintFunction()); // Alias for consistency
+            this.ExportedEnv.Define("writeLine", new PrintFunction()); 
             this.ExportedEnv.Define("write", new WriteFunction());
             this.ExportedEnv.Define("readLine", new ReadLineFunction());
             this.ExportedEnv.Define("clear", new ClearFunction());
@@ -21,7 +21,7 @@ namespace Quartz.Runtime.Modules
 
         private class PrintFunction : ICallable
         {
-            public int Arity() => -1; // Variadic
+            public int Arity() => -1; 
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
@@ -34,7 +34,7 @@ namespace Quartz.Runtime.Modules
 
         private class WriteFunction : ICallable
         {
-            public int Arity() => -1; // Variadic
+            public int Arity() => -1; 
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
@@ -71,4 +71,5 @@ namespace Quartz.Runtime.Modules
         }
     }
 }
+
 

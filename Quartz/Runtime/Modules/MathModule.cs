@@ -10,11 +10,11 @@ namespace Quartz.Runtime.Modules
     {
         public MathModule() : base(new Environment())
         {
-            // Constants
+            
             ExportedEnv.Define("PI", Math.PI);
             ExportedEnv.Define("E", Math.E);
 
-            // Functions
+            
             ExportedEnv.Define("abs", new NativeMathOneArg(Math.Abs));
             ExportedEnv.Define("ceil", new NativeMathOneArg(Math.Ceiling));
             ExportedEnv.Define("floor", new NativeMathOneArg(Math.Floor));
@@ -29,7 +29,7 @@ namespace Quartz.Runtime.Modules
             ExportedEnv.Define("max", new NativeMathTwoArgs(Math.Max));
         }
 
-        // Helper classes for standard Math functions
+        
         private class NativeMathOneArg : ICallable
         {
             private Func<double, double> func;
@@ -43,7 +43,7 @@ namespace Quartz.Runtime.Modules
 
             public object Call(Interpreter interpreter, List<object> arguments)
             {
-                // Force convert to double
+                
                 double arg = Convert.ToDouble(arguments[0]);
                 return func(arg);
             }
@@ -75,4 +75,5 @@ namespace Quartz.Runtime.Modules
 
     }
 }
+
 

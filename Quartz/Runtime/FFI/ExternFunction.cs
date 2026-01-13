@@ -8,7 +8,7 @@ namespace Quartz.Runtime.FFI
 {
     internal class ExternFunction : ICallable
     {
-        public int Arity() => -1; // Variadic
+        public int Arity() => -1; 
 
         public object Call(Interpreter interpreter, List<object> arguments)
         {
@@ -59,4 +59,5 @@ namespace Quartz.Runtime.FFI
         public override string ToString() => "<native fn factory>";
     }
 }
+
 

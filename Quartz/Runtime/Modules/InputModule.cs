@@ -59,3 +59,4 @@ namespace Quartz.Runtime.Modules
         }
     }
 }
+

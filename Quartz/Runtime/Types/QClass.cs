@@ -10,11 +10,13 @@ namespace Quartz.Runtime.Types
     internal class QClass : ICallable
     {
         public string Name { get; }
+        public QClass Superclass { get; }
         private readonly Dictionary<string, Function> methods;
 
-        public QClass(string name, Dictionary<string, Function> methods)
+        public QClass(string name, QClass superclass, Dictionary<string, Function> methods)
         {
             Name = name;
+            Superclass = superclass;
             this.methods = methods;
         }
 
@@ -24,6 +26,12 @@ namespace Quartz.Runtime.Types
             {
                 return methods[name];
             }
+
+            if (Superclass != null)
+            {
+                return Superclass.FindMethod(name);
+            }
+
             return null;
         }
 
@@ -52,4 +60,5 @@ namespace Quartz.Runtime.Types
         }
     }
 }
+
 

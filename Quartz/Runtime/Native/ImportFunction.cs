@@ -35,12 +35,12 @@ namespace Quartz.Runtime.Native
 
             string content = File.ReadAllText(fullPath);
 
-            // Execute module in a new environment that inherits from global
-            // Note: In some languages imports are isolated. Here we allow access to global builtins.
+            
+            
             Environment moduleEnv = new Environment(interpreter.global);
             Module module = new Module(moduleEnv);
 
-            // Cache early to support circular dependencies
+            
             cache[fullPath] = module;
 
             try
@@ -54,12 +54,12 @@ namespace Quartz.Runtime.Native
             }
             catch
             {
-                // If execution fails, remove from cache to allow retry
+                
                 cache.Remove(fullPath);
                 throw;
             }
 
-            // Inject imported symbols into current environment
+            
             foreach (var kvp in module.ExportedEnv.Values)
             {
                 interpreter.CurrentEnvironment.Define(kvp.Key, kvp.Value);
@@ -69,4 +69,5 @@ namespace Quartz.Runtime.Native
         }
     }
 }
+
 

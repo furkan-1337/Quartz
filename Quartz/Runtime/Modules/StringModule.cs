@@ -97,7 +97,7 @@ namespace Quartz.Runtime.Modules
 
                 string[] parts = str.Split(new string[] { sep }, StringSplitOptions.None);
 
-                // Convert string[] to List<object>
+                
                 List<object> list = new List<object>();
                 foreach (var part in parts)
                 {
@@ -109,4 +109,5 @@ namespace Quartz.Runtime.Modules
         }
     }
 }
+
 

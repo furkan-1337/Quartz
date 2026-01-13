@@ -39,6 +39,10 @@ namespace Quartz
             {
                 Console.WriteLine($"Could not read file: {e.Message}");
             }
+            catch (ParseError error)
+            {
+                ErrorReporter.Error(error.Token, error.Message);
+            }
             catch (Exception e)
             {
                 Console.WriteLine($"Error: {e.Message}");
@@ -56,6 +60,10 @@ namespace Quartz
                 try
                 {
                     Run(line);
+                }
+                catch (ParseError error)
+                {
+                    ErrorReporter.Error(error.Token, error.Message);
                 }
                 catch (Exception ex)
                 {
@@ -81,15 +89,16 @@ namespace Quartz
             }
             catch (RuntimeError error)
             {
-                Console.WriteLine($"[Runtime Error] {error.Message} \n[Line {error.Token.Line}]");
+                ErrorReporter.Error(error.Token, error.Message);
                 hadError = true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Error] {ex.Message}");
+                Console.WriteLine($"[Error] Unexpected: {ex.Message}");
                 hadError = true;
             }
         }
     }
 }
+
 

@@ -8,15 +8,16 @@ namespace Quartz.Runtime.Native
 {
     internal class TimeFunction : ICallable
     {
-        public int Arity() => 0; // No arguments needed
+        public int Arity() => 0; 
 
         public object Call(Interpreter interpreter, List<object> arguments)
         {
-            // Return current time in milliseconds
+            
             return (int)DateTimeOffset.Now.ToUnixTimeMilliseconds();
         }
 
         public override string ToString() => "<native fn time>";
     }
 }
+
 
